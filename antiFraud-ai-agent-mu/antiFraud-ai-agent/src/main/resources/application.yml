@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: antiFraud-ai-agent
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.autoconfigure.mcp.client.McpAutoConfiguration
+      - org.springframework.ai.autoconfigure.mcp.client.common.McpClientCommonAutoConfiguration
+      - org.springframework.ai.autoconfigure.mcp.client.httpclient.McpClientHttpClientAutoConfiguration
+      - org.springframework.ai.autoconfigure.mcp.client.sse.McpClientSseAutoConfiguration
+      - org.springframework.ai.autoconfigure.mcp.client.tool.McpToolCallbackAutoConfiguration
+      - org.springframework.ai.autoconfigure.mcp.client.McpToolCallbackAutoConfiguration
+  ai:
+    model:
+      chat: dashscope
+      embedding: dashscope
+    mcp:
+      client:
+        enabled: false
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 100MB
+      file-size-threshold: 10MB
+
+  # JPA 数据源配置（开发环境使用 H2 内存数据库）
+  datasource:
+    url: jdbc:h2:mem:antifraud
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  profiles:
+    active: local
+
+# Python 微服务配置
+python:
+  service:
+    url: http://localhost:8501
+
+server:
+  port: 8123
+  servlet:
+    context-path: /api
+# springdoc-openapi????
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.antifraudqi.antifraudaiagent.controller
+# knife4j???????????????
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn

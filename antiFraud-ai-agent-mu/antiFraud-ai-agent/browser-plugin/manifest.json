@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "反诈卫士",
+  "version": "1.0.0",
+  "description": "智能反诈检测助手，帮助您识别和防范各类网络诈骗风险",
+  "author": "反诈卫士团队",
+  "homepage_url": "http://localhost:8123",
+  "icons": {
+    "16": "icons/icon.svg",
+    "32": "icons/icon.svg",
+    "48": "icons/icon.svg",
+    "128": "icons/icon.svg"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "反诈卫士 - 诈骗风险检测",
+    "default_icon": {
+      "16": "icons/icon.svg",
+      "32": "icons/icon.svg",
+      "48": "icons/icon.svg",
+      "128": "icons/icon.svg"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:8123/*"
+  ],
+  "minimum_chrome_version": "88"
+}

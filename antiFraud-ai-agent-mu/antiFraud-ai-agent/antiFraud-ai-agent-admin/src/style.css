@@ -1,0 +1,459 @@
+:root {
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 60px;
+  --primary-color: #409EFF;
+  --primary-light: #ecf5ff;
+  --success-color: #67C23A;
+  --warning-color: #E6A23C;
+  --danger-color: #F56C6C;
+  --info-color: #909399;
+  --text-primary: #303133;
+  --text-regular: #606266;
+  --text-secondary: #909399;
+  --text-placeholder: #C0C4CC;
+  --border-base: #DCDFE6;
+  --border-light: #E4E7ED;
+  --border-lighter: #EBEEF5;
+  --bg-base: #F5F7FA;
+  --bg-page: #F0F2F5;
+  --white: #FFFFFF;
+  --shadow-base: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  background-color: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: var(--primary-color);
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 管理后台布局 */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  width: var(--sidebar-width);
+  background: #304156;
+  color: #bfcbd9;
+  transition: width 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.admin-sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+
+.sidebar-logo {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  background: #2b3a4a;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-logo .logo-icon {
+  font-size: 24px;
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.sidebar-logo .logo-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin-left: 10px;
+  transition: opacity 0.3s;
+}
+
+.sidebar-logo .logo-text.hidden {
+  opacity: 0;
+  width: 0;
+  margin-left: 0;
+}
+
+.sidebar-menu {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: 8px;
+}
+
+.sidebar-toggle {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  color: #bfcbd9;
+  transition: color 0.2s;
+}
+
+.sidebar-toggle:hover {
+  color: #fff;
+}
+
+.admin-main {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  transition: margin-left 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.admin-main.expanded {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+.admin-header {
+  height: var(--header-height);
+  background: var(--white);
+  border-bottom: 1px solid var(--border-lighter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: var(--shadow-base);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-breadcrumb {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.header-user .username {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.admin-content {
+  flex: 1;
+  padding: 20px;
+  background: var(--bg-page);
+}
+
+/* 页面通用样式 */
+.page-container {
+  background: var(--white);
+  border-radius: 8px;
+  box-shadow: var(--shadow-base);
+  padding: 24px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* 统计卡片 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stats-card {
+  background: var(--white);
+  border-radius: 8px;
+  box-shadow: var(--shadow-base);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+.stats-card .stats-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.stats-card .stats-icon.blue {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.stats-card .stats-icon.green {
+  background: #f0f9eb;
+  color: var(--success-color);
+}
+
+.stats-card .stats-icon.orange {
+  background: #fdf6ec;
+  color: var(--warning-color);
+}
+
+.stats-card .stats-icon.red {
+  background: #fef0f0;
+  color: var(--danger-color);
+}
+
+.stats-card .stats-info {
+  flex: 1;
+}
+
+.stats-card .stats-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.stats-card .stats-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.stats-card .stats-change {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.stats-card .stats-change.up {
+  color: var(--success-color);
+}
+
+.stats-card .stats-change.down {
+  color: var(--danger-color);
+}
+
+/* 图表容器 */
+.chart-container {
+  background: var(--white);
+  border-radius: 8px;
+  box-shadow: var(--shadow-base);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.chart-container .chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.chart-box {
+  width: 100%;
+  height: 360px;
+}
+
+/* 筛选区域 */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--bg-base);
+  border-radius: 6px;
+}
+
+.filter-bar .filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-bar .filter-item .filter-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.filter-bar .filter-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* 任务卡片 */
+.task-card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 16px;
+}
+
+.task-card {
+  background: var(--white);
+  border-radius: 8px;
+  box-shadow: var(--shadow-base);
+  padding: 20px;
+  border-left: 4px solid var(--primary-color);
+  transition: box-shadow 0.2s;
+}
+
+.task-card:hover {
+  box-shadow: var(--shadow-medium);
+}
+
+.task-card.risk-high {
+  border-left-color: var(--danger-color);
+}
+
+.task-card.risk-medium {
+  border-left-color: var(--warning-color);
+}
+
+.task-card.risk-low {
+  border-left-color: var(--success-color);
+}
+
+.task-card .task-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.task-card .task-user {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-card .task-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.task-card .task-body {
+  margin-bottom: 12px;
+}
+
+.task-card .task-desc {
+  font-size: 13px;
+  color: var(--text-regular);
+  line-height: 1.6;
+}
+
+.task-card .task-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-lighter);
+}
+
+.task-card .task-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 响应式 */
+@media screen and (max-width: 1440px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    width: var(--sidebar-collapsed-width);
+  }
+
+  .admin-main {
+    margin-left: var(--sidebar-collapsed-width);
+  }
+
+  .task-card-list {
+    grid-template-columns: 1fr;
+  }
+}

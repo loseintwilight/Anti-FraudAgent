@@ -1,0 +1,30 @@
+# FastAPI 及其服务器
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+
+# 数据验证
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# 风险评分与数据处理
+numpy>=1.24.0
+pandas>=2.0.0
+
+# 图片报告生成
+Pillow>=10.0.0
+
+# NLP 相关（sentence-transformers 会自行拉取兼容的 torch 版本）
+sentence-transformers>=2.2.0
+
+# 向量存储（chromadb 会自行处理底层依赖兼容性）
+chromadb>=0.4.0
+
+# 爬虫相关
+requests>=2.28.0
+beautifulsoup4>=4.11.0
+lxml>=4.9.0
+schedule>=1.1.0
+
+# 工具库
+python-multipart>=0.0.5
+python-dateutil>=2.8.0

@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI反诈骗大师 - 全流程闭环演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f2e;
+            --bg-card: #232a3b;
+            --text-primary: #e7e9ea;
+            --text-secondary: #8b98a5;
+            --accent-blue: #1d9bf0;
+            --accent-green: #00ba7c;
+            --accent-yellow: #ffad1f;
+            --accent-red: #f4212e;
+            --border-color: #38444d;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #1d9bf0, #00ba7c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        
+        .flow-steps {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        .flow-step {
+            background: var(--bg-card);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+        }
+        
+        .flow-step.active {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+        
+        .flow-step.completed {
+            background: var(--accent-green);
+            color: white;
+            border-color: var(--accent-green);
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1000px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+        
+        .card-header {
+            padding: 16px 20px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .card-header .step-badge {
+            background: var(--accent-blue);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .input-section textarea {
+            width: 100%;
+            min-height: 120px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            resize: vertical;
+            margin-bottom: 15px;
+        }
+        
+        .input-section textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+        
+        .sample-texts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .sample-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .sample-btn:hover {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+        
+        .analyze-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent-blue), #0077cc);
+            border: none;
+            color: white;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(29, 155, 240, 0.3);
+        }
+        
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* 结果展示 */
+        .result-section {
+            display: none;
+        }
+        
+        .result-section.visible {
+            display: block;
+        }
+        
+        .result-item {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--accent-blue);
+        }
+        
+        .result-item h4 {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+        }
+        
+        .result-item .content {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        /* 检索结果 */
+        .search-result {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .search-result .similarity {
+            display: inline-block;
+            background: var(--accent-green);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+        }
+        
+        .search-result .case-id {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .search-result .case-type {
+            color: var(--accent-blue);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .search-result .case-desc {
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        
+        /* 风险等级 */
+        .risk-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .risk-low {
+            background: rgba(0, 186, 124, 0.2);
+            color: var(--accent-green);
+            border: 2px solid var(--accent-green);
+        }
+        
+        .risk-medium {
+            background: rgba(255, 173, 31, 0.2);
+            color: var(--accent-yellow);
+            border: 2px solid var(--accent-yellow);
+        }
+        
+        .risk-high {
+            background: rgba(244, 33, 46, 0.2);
+            color: var(--accent-red);
+            border: 2px solid var(--accent-red);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(244, 33, 46, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(244, 33, 46, 0); }
+        }
+        
+        /* 预警弹窗 */
+        .alert-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s;
+        }
+        
+        .alert-modal.visible {
+            display: flex;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .alert-content {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            animation: slideUp 0.4s;
+            border: 2px solid var(--border-color);
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .alert-content.alert-low {
+            border-color: var(--accent-green);
+        }
+        
+        .alert-content.alert-medium {
+            border-color: var(--accent-yellow);
+        }
+        
+        .alert-content.alert-high {
+            border-color: var(--accent-red);
+            animation: slideUp 0.4s, shake 0.5s 0.4s;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+        
+        .alert-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+        
+        .alert-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .alert-message {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .alert-close-btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .alert-close-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        /* 监护人通知 */
+        .guardian-notification {
+            background: linear-gradient(135deg, #2a1f3d, #1a1f2e);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #4a3f5c;
+        }
+        
+        .notification-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .notification-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--accent-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .notification-info h4 {
+            font-size: 1rem;
+            margin-bottom: 3px;
+        }
+        
+        .notification-info p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .notification-content {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .notification-content p {
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .notification-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .notification-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .notification-btn.call {
+            background: var(--accent-green);
+            color: white;
+        }
+        
+        .notification-btn.report {
+            background: var(--accent-blue);
+            color: white;
+        }
+        
+        /* 安全报告 */
+        .security-report {
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        
+        .report-header {
+            background: linear-gradient(135deg, #1a365d, #2a4a7f);
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .report-header h3 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        
+        .report-header p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+        }
+        
+        .report-body {
+            padding: 20px;
+        }
+        
+        .report-section {
+            margin-bottom: 20px;
+        }
+        
+        .report-section h4 {
+            font-size: 0.9rem;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .report-section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .report-section li {
+            padding: 8px 0;
+            padding-left: 20px;
+            position: relative;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .report-section li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--accent-blue);
+        }
+        
+        .report-footer {
+            background: var(--bg-secondary);
+            padding: 15px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        /* 处理动画 */
+        .processing {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .processing-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .processing-text {
+            color: var(--text-secondary);
+        }
+        
+        /* 标签 */
+        .tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            margin-right: 5px;
+        }
+        
+        .tag-fraud {
+            background: rgba(244, 33, 46, 0.2);
+            color: var(--accent-red);
+        }
+        
+        .tag-keyword {
+            background: rgba(29, 155, 240, 0.2);
+            color: var(--accent-blue);
+        }
+        
+        /* 时间线 */
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .timeline::before {
+            content: "";
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border-color);
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+        
+        .timeline-item::before {
+            content: "";
+            position: absolute;
+            left: -24px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+        }
+        
+        .timeline-item.completed::before {
+            background: var(--accent-green);
+        }
+        
+        .timeline-item h5 {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        
+        .timeline-item p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>AI反诈骗大师 - 全流程闭环演示</h1>
+            <p>基于真实知识库的智能反诈系统，实现从输入识别到安全报告的完整闭环</p>
+            <div class="flow-steps" id="flowSteps">
+                <span class="flow-step" data-step="1">① 多模态输入</span>
+                <span class="flow-step" data-step="2">② 文本预处理</span>
+                <span class="flow-step" data-step="3">③ 向量检索</span>
+                <span class="flow-step" data-step="4">④ 案例匹配</span>
+                <span class="flow-step" data-step="5">⑤ 意图识别</span>
+                <span class="flow-step" data-step="6">⑥ 风险判定</span>
+                <span class="flow-step" data-step="7">⑦ 分级预警</span>
+                <span class="flow-step" data-step="8">⑧ 监护人通知</span>
+                <span class="flow-step" data-step="9">⑨ 安全报告</span>
+            </div>
+        </div>
+        
+        <div class="main-grid">
+            <!-- 左侧：输入和检索 -->
+            <div>
+                <!-- 输入区域 -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <div class="card-header">
+                        <span class="step-badge">步骤1</span>
+                        <h3>骗子诱导文本输入</h3>
+                    </div>
+                    <div class="card-body input-section">
+                        <textarea id="inputText" placeholder="请输入需要分析的文本内容，例如可疑短信、聊天记录、电话录音转文字等..."></textarea>
+                        <div class="sample-texts">
+                            <span style="color: var(--text-secondary); font-size: 0.85rem; margin-right: 10px;">示例文本：</span>
+                            <button class="sample-btn" onclick="loadSample('gongjianfa')">冒充公检法</button>
+                            <button class="sample-btn" onclick="loadSample('shuadan')">刷单诈骗</button>
+                            <button class="sample-btn" onclick="loadSample('daikuan')">网贷诈骗</button>
+                            <button class="sample-btn" onclick="loadSample('youxi')">游戏诈骗</button>
+                            <button class="sample-btn" onclick="loadSample('baojian')">保健品诈骗</button>
+                            <button class="sample-btn" onclick="loadSample('normal')">正常对话</button>
+                        </div>
+                        <button class="analyze-btn" id="analyzeBtn" onclick="startAnalysis()">
+                            🚀 开始全流程分析
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 检索结果 -->
+                <div class="card result-section" id="searchResultCard">
+                    <div class="card-header">
+                        <span class="step-badge">步骤2-4</span>
+                        <h3>知识库检索结果</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="searchResults"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧：识别结果和报告 -->
+            <div>
+                <!-- 意图识别结果 -->
+                <div class="card result-section" id="intentCard" style="margin-bottom: 20px;">
+                    <div class="card-header">
+                        <span class="step-badge">步骤5-6</span>
+                        <h3>意图识别与风险判定</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="intentResult"></div>
+                    </div>
+                </div>
+                
+                <!-- 监护人通知 -->
+                <div class="card result-section" id="guardianCard" style="margin-bottom: 20px;">
+                    <div class="card-header">
+                        <span class="step-badge">步骤8</span>
+                        <h3>监护人通知模拟</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="guardianNotification"></div>
+                    </div>
+                </div>
+                
+                <!-- 安全报告 -->
+                <div class="card result-section" id="reportCard">
+                    <div class="card-header">
+                        <span class="step-badge">步骤9</span>
+                        <h3>安全报告生成</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="securityReport"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 预警弹窗 -->
+    <div class="alert-modal" id="alertModal">
+        <div class="alert-content" id="alertContent">
+            <div class="alert-icon" id="alertIcon"></div>
+            <div class="alert-title" id="alertTitle"></div>
+            <div class="alert-message" id="alertMessage"></div>
+            <button class="alert-close-btn" onclick="closeAlert()">我已了解</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 真实知识库数据 ====================
+        const knowledgeBase = [
+            // 老年篇
+            {
+                id: "LN-001",
+                type: "冒充公检法诈骗",
+                group: "老年",
+                keywords: ["公检法", "警察", "检察官", "涉嫌违法", "保证金", "罚款", "安全账户", "洗钱", "冻结"],
+                description: "骗子伪装成警察、检察官、法官，以\"子女涉嫌违法\"为由，诱导交\"罚款\"\"保证金\"。公检法机关不会通过电话办案、索要钱款。",
+                riskLevel: "high",
+                case: "某67岁老人接到\"警察\"电话，称其儿子涉嫌洗钱，需交5万元\"保证金\"才能放人，老人转账后，联系儿子确认安全，才知道被骗。",
+                law: "冒充公检法工作人员实施诈骗，属于诈骗罪的加重情节",
+                defense: "公检法机关不会通过电话办案、索要钱款；遇到此类电话，立即挂断并拨打110报警。"
+            },
+            {
+                id: "LN-002",
+                type: "保健品诈骗",
+                group: "老年",
+                keywords: ["保健品", "能治百病", "治糖尿病", "治高血压", "治癌症", "特效药", "神药"],
+                description: "骗子夸大保健品功效，谎称能治疗高血压、糖尿病、癌症等疾病，诱导老人高价购买劣质保健品。",
+                riskLevel: "medium",
+                case: "某70岁老人听信推销员\"保健品能治糖尿病\"的谎言，花费5万元购买保健品，服用后病情加重。",
+                law: "《食品安全法》规定，食品、保健品不得声称具有治疗功效",
+                defense: "凡是声称\"能治百病\"的保健品、药品，均为诈骗；看病买药要去正规医院、药店。"
+            },
+            {
+                id: "LN-003",
+                type: "养老金诈骗",
+                group: "老年",
+                keywords: ["养老金", "社保", "未到账", "点击链接", "核实", "身份证号", "银行卡号"],
+                description: "骗子发送钓鱼链接，诱导老人填写身份证号、银行卡号、支付密码等信息，进而盗取养老金账户资金。",
+                riskLevel: "high",
+                case: "某68岁老人收到\"养老金未到账\"短信，点击链接后填写了银行卡信息和密码，导致养老金账户被盗刷2万元。",
+                law: "盗取老年人养老金，构成盗窃罪，同时属于诈骗罪的加重情节",
+                defense: "养老金问题仅通过官方渠道办理，陌生链接、陌生电话索要信息的，均为诈骗。"
+            },
+            {
+                id: "LN-004",
+                type: "以房养老诈骗",
+                group: "老年",
+                keywords: ["以房养老", "抵押房子", "高额养老金", "房子过户", "每月领钱"],
+                description: "骗子诱导老人签订虚假抵押合同，将房子过户到骗子名下，随后卷走房产。",
+                riskLevel: "high",
+                case: "某72岁老人参与\"以房养老\"项目，将房子抵押给骗子公司，每月领了3个月养老金后，公司失联，房子被过户。",
+                law: "\"以房养老\"诈骗属于典型的合同诈骗、诈骗罪",
+                defense: "正规\"以房养老\"业务极少，且需通过银行等金融机构办理；凡是上门推销\"以房养老\"的，均为诈骗。"
+            },
+            {
+                id: "LN-005",
+                type: "医保诈骗",
+                group: "老年",
+                keywords: ["医保卡", "被盗刷", "冻结账户", "医保局", "提供身份证"],
+                description: "骗子伪装成医保局工作人员，以\"医保卡被盗刷\"为由索要身份证号、银行卡号、支付密码。",
+                riskLevel: "high",
+                case: "某66岁老人接到\"医保局\"电话，对方称其医保卡被盗刷，需提供身份证号和银行卡号冻结账户，老人提供后，银行卡内1.8万元被转走。",
+                law: "冒充医保局工作人员实施诈骗，构成诈骗罪",
+                defense: "医保卡问题仅通过医保局官方渠道处理，凡是索要个人信息、银行卡信息的\"医保工作人员\"，均为诈骗。"
+            },
+            {
+                id: "LN-006",
+                type: "冒充亲友绑架诈骗",
+                group: "老年",
+                keywords: ["子女被绑架", "赎金", "撕票", "马上转账", "救孩子"],
+                description: "骗子伪装成绑匪，利用老人担心子女的心理，以\"撕票\"为要挟，索要高额赎金。",
+                riskLevel: "high",
+                case: "某65岁老人接到\"儿子被绑架\"的电话，对方要求转账20万元赎金，老人慌乱中准备转账，被银行工作人员拦下。",
+                law: "冒充绑匪实施诈骗，构成诈骗罪；绑架行为本身是严重刑事犯罪",
+                defense: "遇到此类电话，先冷静联系子女、家人核实，切勿盲目转账；及时报警求助。"
+            },
+            // 少儿篇
+            {
+                id: "SE-001",
+                type: "游戏诈骗",
+                group: "少儿",
+                keywords: ["游戏皮肤", "免费领", "扫码登录", "游戏账号", "解封", "充值", "装备"],
+                description: "骗子以\"免费领皮肤/装备\"为诱饵，诱导孩子点击钓鱼链接、扫码登录陌生账号，盗取游戏账号和绑定的支付账户资金。",
+                riskLevel: "medium",
+                case: "某小学五年级学生在游戏群看到\"免费领限定皮肤\"的消息，扫码后被骗子控制手机，转走家长微信余额3000余元。",
+                law: "《未成年人保护法》第七十二条规定，网络服务提供者应当针对未成年人设置消费管理功能",
+                defense: "凡是\"免费领游戏道具\"\"扫码解锁特权\"的陌生消息，均为诈骗，立即拒绝并告知家长。"
+            },
+            {
+                id: "SE-002",
+                type: "追星诈骗",
+                group: "少儿",
+                keywords: ["明星", "QQ号泄露", "签名照", "粉丝群", "入群费", "周边"],
+                description: "骗子利用孩子的追星心理，以\"送签名照\"\"进明星粉丝群\"为诱饵，诱导其付费入群、购买\"周边\"。",
+                riskLevel: "medium",
+                case: "12岁女孩为了获取偶像签名照，向骗子转账300元\"入群费\"，转账后被对方拉黑。",
+                law: "以非法占有为目的，虚构事实骗取他人财物，构成诈骗罪",
+                defense: "凡是\"加好友送明星周边\"\"泄露明星隐私\"的消息，均为诈骗，直接忽略。"
+            },
+            {
+                id: "SE-003",
+                type: "返利诈骗",
+                group: "少儿",
+                keywords: ["返利", "发100返200", "红包返利", "返利群", "双倍返还"],
+                description: "骗子先让参与者小额返利，诱导其投入大额资金，随后卷走所有钱款，群内的\"返利截图\"都是骗子的托。",
+                riskLevel: "medium",
+                case: "某小学六年级班级群被骗子混入，以\"发红包返利\"为由诱导孩子，多名孩子用家长手机转账，总计损失1万余元。",
+                law: "返利诈骗属于典型的诈骗罪，同时诱导未成年人参与诈骗违反《未成年人保护法》",
+                defense: "凡是\"发钱返利\"\"高回报低风险\"的群聊，均为诈骗，立即退群并告知家长、老师。"
+            },
+            {
+                id: "SE-004",
+                type: "网恋诈骗",
+                group: "少儿",
+                keywords: ["网恋", "同龄人", "谈恋爱", "借钱", "生病", "买礼物", "杀猪盘"],
+                description: "骗子伪装成同龄人，先和孩子培养感情，再以各种理由借钱，得手后拉黑消失。",
+                riskLevel: "medium",
+                case: "某初二学生在网上认识\"同龄女孩\"，交往1个月后，对方以\"妈妈生病住院\"为由借钱5000元，转账后被对方拉黑。",
+                law: "以网恋为名骗取财物，构成诈骗罪；诱导未成年人网恋违反《未成年人保护法》",
+                defense: "未成年人禁止与陌生网友网恋，凡是网友以各种理由借钱，均为诈骗，直接拒绝。"
+            },
+            {
+                id: "SE-005",
+                type: "敲诈勒索诈骗",
+                group: "少儿",
+                keywords: ["照片泄露", "不雅照片", "曝光", "给钱删除", "威胁", "敲诈"],
+                description: "骗子伪造孩子的照片或隐私信息，以\"曝光隐私\"为要挟，索要钱财。",
+                riskLevel: "high",
+                case: "某初中女生收到陌生消息，对方称掌握其\"不雅照片\"，要求转账1000元否则发给学校，孩子害怕后转账，后发现对方根本没有照片。",
+                law: "以曝光隐私为要挟索要财物，构成敲诈勒索罪",
+                defense: "遇到此类威胁，立即告知家长、老师，直接报警，切勿转账妥协。"
+            },
+            // 青年篇
+            {
+                id: "QN-001",
+                type: "网贷诈骗",
+                group: "青年",
+                keywords: ["无抵押", "低利息", "秒到账", "贷款", "保证金", "解冻金", "刷流水", "账户冻结"],
+                description: "骗子以\"低门槛贷款\"为诱饵，诱导用户填写个人信息，随后以\"交保证金\"\"刷流水\"\"账户冻结\"为由索要钱款。",
+                riskLevel: "medium",
+                case: "某大学生因生活费紧张，看到网贷广告后申请贷款，被骗子以\"交解冻金\"为由转走5000元，未收到任何贷款。",
+                law: "《关于规范民间借贷行为维护经济金融秩序有关事项的通知》明确禁止无资质机构从事网贷业务",
+                defense: "凡是\"无抵押、秒到账\"的网贷广告，均为诈骗；正规贷款不会提前收取任何费用。"
+            },
+            {
+                id: "QN-002",
+                type: "刷单诈骗",
+                group: "青年",
+                keywords: ["刷单", "佣金", "点赞赚钱", "返利", "兼职", "先交钱", "联单", "任务"],
+                description: "骗子先让用户做小额任务返现，诱导其投入大额资金，随后以\"任务未完成\"\"系统故障\"为由拒绝返款。",
+                riskLevel: "medium",
+                case: "某刚毕业的大学生做刷单兼职，先赚了200元后，被要求充值1万元\"完成联单\"，充值后被对方拉黑，损失1万元。",
+                law: "《反不正当竞争法》第八条禁止刷单炒信行为；诈骗行为触犯《刑法》第二百六十六条",
+                defense: "所有\"刷单\"\"点赞返利\"的兼职均为诈骗，切勿参与；正规兼职不会要求提前充值。"
+            },
+            {
+                id: "QN-003",
+                type: "投资理财诈骗",
+                group: "青年",
+                keywords: ["投资", "虚拟币", "炒股", "高回报", "低风险", "导师", "赚大钱", "杀猪盘"],
+                description: "骗子先让用户小额盈利，诱导其加大投资，随后操纵平台后台，让用户\"亏损\"，最终卷走所有资金。",
+                riskLevel: "medium",
+                case: "某职场青年在社交平台认识\"投资导师\"，跟着投资虚拟币，先赚了1万元后，加大投资20万元，随后平台无法登录，骗子失联。",
+                law: "虚拟币交易不受我国法律保护，操纵投资平台诈骗构成诈骗罪",
+                defense: "凡是\"高回报、低风险\"的投资推荐，均为诈骗；切勿向陌生平台转账投资。"
+            },
+            {
+                id: "QN-004",
+                type: "冒充客服诈骗",
+                group: "青年",
+                keywords: ["快递丢失", "双倍赔偿", "客服", "退款", "银行卡号", "验证码", "理赔"],
+                description: "骗子伪装成快递客服，以\"赔偿\"为由索要银行卡号、短信验证码，进而盗刷账户资金。",
+                riskLevel: "high",
+                case: "某青年接到\"快递丢失赔偿\"电话，提供了银行卡号和验证码后，银行卡内1.2万元被瞬间转走。",
+                law: "冒充客服身份实施诈骗，构成诈骗罪；窃取他人银行卡信息涉嫌窃取信用卡信息罪",
+                defense: "快递赔偿仅通过官方渠道处理，凡是索要银行卡号、验证码的\"客服\"，均为诈骗。"
+            },
+            {
+                id: "QN-005",
+                type: "冒充亲友诈骗",
+                group: "青年",
+                keywords: ["家人出车祸", "生病", "紧急打钱", "手术费", "借钱", "亲戚", "朋友"],
+                description: "骗子伪装成家人、朋友，以\"紧急情况\"为由索要转账，诱导用户慌乱中打钱。",
+                riskLevel: "medium",
+                case: "某青年接到\"父亲出车祸\"的电话，对方自称医院护士，要求转账3万元\"手术费\"，转账后发现父亲根本没事。",
+                law: "冒充亲友身份实施诈骗，构成诈骗罪；利用他人焦虑情绪诈骗，法院会酌情从重处罚",
+                defense: "遇到此类紧急情况，先通过电话、视频等方式联系家人核实，切勿盲目转账。"
+            },
+            {
+                id: "QN-006",
+                type: "中奖诈骗",
+                group: "青年",
+                keywords: ["中奖", "手机号中奖", "iPhone", "个税", "手续费", "保证金", "领奖"],
+                description: "骗子以\"中奖\"为诱饵，诱导用户交\"个税\"\"手续费\"\"保证金\"，得手后消失，不会发放任何奖品。",
+                riskLevel: "medium",
+                case: "某青年收到\"手机号中一等奖，奖品是iPhone15\"的短信，向骗子转账2000元\"个税\"，转账后被对方拉黑。",
+                law: "虚构中奖信息骗取财物，构成诈骗罪",
+                defense: "凡是\"未参与却中奖\"的消息，均为诈骗；正规中奖不会提前收取任何费用。"
+            },
+            {
+                id: "QN-007",
+                type: "征信诈骗",
+                group: "青年",
+                keywords: ["征信", "逾期", "还款", "信用记录", "黑名单", "花呗", "信用卡"],
+                description: "骗子发送钓鱼链接，诱导用户填写信用卡号、支付密码等信息，进而盗取账户资金。",
+                riskLevel: "medium",
+                case: "某职场青年收到\"花呗逾期\"短信，点击链接后填写了支付密码，导致银行卡被盗刷8000元。",
+                law: "发送钓鱼链接盗取他人财物，构成诈骗罪",
+                defense: "逾期问题仅通过官方渠道核实，陌生链接、陌生电话索要还款信息的，均为诈骗。"
+            }
+        ];
+        
+        // 高风险关键词（直接判定高风险）
+        const highRiskKeywords = [
+            "公检法", "警察", "安全账户", "验证码", "冒充客服", "医保卡被盗", 
+            "照片泄露", "敲诈", "绑架", "撕票", "冻结账户", "被盗刷"
+        ];
+        
+        // 中风险关键词
+        const mediumRiskKeywords = [
+            "刷单", "贷款", "征信", "投资理财", "保健品", "返利", "中奖",
+            "游戏皮肤", "追星", "网恋", "以房养老", "养老金"
+        ];
+        
+        // 示例文本
+        const sampleTexts = {
+            gongjianfa: "您好，这里是市公安局刑事侦查大队。经查，您的银行账户涉嫌参与一起重大洗钱案件，涉案金额高达500万元。现在需要您配合调查，将资金转入我局安全账户进行核查，核查完毕后会原路退回。请立即操作，否则将冻结您所有账户并对您实施抓捕。安全账户：6222xxxx xxxx xxxx 8888，户名：王建国。",
+            shuadan: "亲，想不想轻松赚零花钱？我们公司招刷单兼职，只需要用手机刷刷淘宝订单，每单佣金5-50元不等，日结！先试试这个任务：帮这家店点赞收藏，截图发给我，立返2元红包。做得好可以接大单，一单佣金几百块呢！",
+            daikuan: "【极速贷】恭喜您获得50000元贷款额度！无抵押、无担保、低利息、秒到账！仅限今日，点击链接立即申请：http://xxx.com。回T退订",
+            youxi: "小哥哥，免费送王者荣耀限定皮肤啦！只需扫码登录游戏账号，验证一下就可以领取永久皮肤哦！机会难得，错过就没有了！扫码链接：[二维码]",
+            baojian: "大爷您好！我们公司新出了一款量子能量养生仪，采用美国NASA航天技术，能治疗高血压、糖尿病、关节炎等多种疾病！现在搞活动，原价29800，现在只要9800，还送价值2000元的保健品套装！错过这村就没这店了！",
+            normal: "今天天气真好，我们一起去公园散步吧。顺便去超市买点水果和蔬菜，晚上做顿好吃的。"
+        };
+        
+        let currentStep = 0;
+        let analysisResult = null;
+        
+        // 加载示例文本
+        function loadSample(type) {
+            document.getElementById('inputText').value = sampleTexts[type];
+        }
+        
+        // 更新流程步骤状态
+        function updateFlowStep(step, status) {
+            const steps = document.querySelectorAll('.flow-step');
+            steps.forEach(s => {
+                const stepNum = parseInt(s.dataset.step);
+                if (stepNum < step) {
+                    s.classList.remove('active');
+                    s.classList.add('completed');
+                } else if (stepNum === step) {
+                    s.classList.add('active');
+                    s.classList.remove('completed');
+                } else {
+                    s.classList.remove('active', 'completed');
+                }
+            });
+        }
+        
+        // 文本预处理 - 分词和关键词提取
+        function preprocessText(text) {
+            // 简单的中文分词和关键词提取
+            const keywords = [];
+            
+            // 检查高风险关键词
+            highRiskKeywords.forEach(kw => {
+                if (text.includes(kw)) {
+                    keywords.push({ word: kw, weight: 3 });
+                }
+            });
+            
+            // 检查中风险关键词
+            mediumRiskKeywords.forEach(kw => {
+                if (text.includes(kw)) {
+                    keywords.push({ word: kw, weight: 2 });
+                }
+            });
+            
+            // 检查知识库关键词
+            knowledgeBase.forEach(item => {
+                item.keywords.forEach(kw => {
+                    if (text.includes(kw) && !keywords.find(k => k.word === kw)) {
+                        keywords.push({ word: kw, weight: 1 });
+                    }
+                });
+            });
+            
+            return keywords;
+        }
+        
+        // 向量检索 - 计算相似度
+        function vectorSearch(text, keywords) {
+            const results = [];
+            
+            knowledgeBase.forEach(item => {
+                let score = 0;
+                let matchedKeywords = [];
+                
+                // 计算关键词匹配得分
+                item.keywords.forEach(kw => {
+                    if (text.includes(kw)) {
+                        score += 1;
+                        matchedKeywords.push(kw);
+                    }
+                });
+                
+                // 额外检查高风险关键词
+                highRiskKeywords.forEach(kw => {
+                    if (text.includes(kw) && item.keywords.includes(kw)) {
+                        score += 2; // 高风险关键词匹配加权
+                    }
+                });
+                
+                if (score > 0) {
+                    // 计算相似度（归一化）
+                    const similarity = Math.min(0.99, score / (item.keywords.length + 5) + score * 0.05);
+                    
+                    results.push({
+                        ...item,
+                        similarity: similarity.toFixed(2),
+                        matchedKeywords: matchedKeywords,
+                        score: score
+                    });
+                }
+            });
+            
+            // 按相似度排序
+            results.sort((a, b) => b.similarity - a.similarity);
+            
+            return results.slice(0, 3); // 返回前3个最匹配的结果
+        }
+        
+        // 意图识别和风险判定
+        function analyzeIntent(text, keywords, searchResults) {
+            let riskLevel = "low";
+            let fraudType = "未识别出诈骗类型";
+            let confidence = 0;
+            
+            // 检查高风险关键词
+            const hasHighRisk = highRiskKeywords.some(kw => text.includes(kw));
+            if (hasHighRisk) {
+                riskLevel = "high";
+                confidence = 0.9;
+            }
+            
+            // 检查中风险关键词
+            const hasMediumRisk = mediumRiskKeywords.some(kw => text.includes(kw));
+            if (hasMediumRisk && riskLevel === "low") {
+                riskLevel = "medium";
+                confidence = 0.7;
+            }
+            
+            // 基于检索结果调整风险等级
+            if (searchResults.length > 0) {
+                const topResult = searchResults[0];
+                
+                // 如果检索结果风险等级更高，则升级
+                if (topResult.riskLevel === "high" && riskLevel !== "high") {
+                    riskLevel = "high";
+                    confidence = Math.max(confidence, parseFloat(topResult.similarity));
+                } else if (topResult.riskLevel === "medium" && riskLevel === "low") {
+                    riskLevel = "medium";
+                    confidence = Math.max(confidence, parseFloat(topResult.similarity) * 0.8);
+                }
+                
+                fraudType = topResult.type;
+                
+                // 如果检索相似度很高，提升置信度
+                if (parseFloat(topResult.similarity) > 0.5) {
+                    confidence = Math.max(confidence, parseFloat(topResult.similarity));
+                }
+            }
+            
+            // 正常文本检测
+            const normalIndicators = ["天气", "散步", "公园", "超市", "水果", "蔬菜", "做饭", "吃饭"];
+            const normalCount = normalIndicators.filter(w => text.includes(w)).length;
+            if (normalCount >= 2 && !hasHighRisk && !hasMediumRisk && searchResults.length === 0) {
+                riskLevel = "low";
+                fraudType = "正常对话";
+                confidence = 0.95;
+            }
+            
+            return {
+                riskLevel,
+                fraudType,
+                confidence: Math.min(0.99, confidence).toFixed(2),
+                matchedKeywords: keywords.map(k => k.word)
+            };
+        }
+        
+        // 生成预警弹窗内容
+        function generateAlert(riskLevel, fraudType) {
+            const alerts = {
+                low: {
+                    icon: "✅",
+                    title: "低风险提示",
+                    message: "经分析，当前内容未发现明显诈骗风险。但仍请保持警惕，不轻信陌生人的转账要求，不点击不明链接。",
+                    class: "alert-low"
+                },
+                medium: {
+                    icon: "⚠️",
+                    title: "中等风险预警",
+                    message: `检测到可疑内容，疑似涉及【${fraudType}】。请提高警惕！切勿向陌生人转账、点击不明链接或提供个人信息。建议与家人核实情况。`,
+                    class: "alert-medium"
+                },
+                high: {
+                    icon: "🚨",
+                    title: "高风险紧急预警",
+                    message: `警告！检测到高风险诈骗内容，疑似【${fraudType}】！请立即停止操作，不要转账、不要提供任何信息！请立即联系家人或拨打110报警！`,
+                    class: "alert-high"
+                }
+            };
+            return alerts[riskLevel];
+        }
+        
+        // 生成监护人通知内容
+        function generateGuardianNotification(result, text) {
+            const time = new Date().toLocaleString('zh-CN');
+            const riskText = {
+                low: "低风险",
+                medium: "中等风险",
+                high: "高风险"
+            };
+            
+            return `
+                <div class="guardian-notification">
+                    <div class="notification-header">
+                        <div class="notification-icon">📱</div>
+                        <div class="notification-info">
+                            <h4>监护人安全提醒</h4>
+                            <p>${time}</p>
+                        </div>
+                    </div>
+                    <div class="notification-content">
+                        <p><strong>风险等级：</strong><span class="risk-badge risk-${result.riskLevel}">${riskText[result.riskLevel]}</span></p>
+                        <p><strong>诈骗类型：</strong>${result.fraudType}</p>
+                        <p><strong>置信度：</strong>${(result.confidence * 100).toFixed(0)}%</p>
+                        <p><strong>敏感内容：</strong></p>
+                        <p style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-top: 5px;">${text.substring(0, 100)}${text.length > 100 ? '...' : ''}</p>
+                    </div>
+                    <div class="notification-actions">
+                        <button class="notification-btn call" onclick="alert('模拟拨打监护人电话...')">📞 联系当事人</button>
+                        <button class="notification-btn report" onclick="alert('模拟报警...')">🚔 一键报警</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 生成安全报告
+        function generateSecurityReport(result, searchResults, text) {
+            const time = new Date().toLocaleString('zh-CN');
+            const topCase = searchResults[0];
+            
+            let report = `
+                <div class="security-report">
+                    <div class="report-header">
+                        <h3>🛡️ AI反诈骗安全报告</h3>
+                        <p>生成时间：${time}</p>
+                    </div>
+                    <div class="report-body">
+                        <div class="report-section">
+                            <h4>📊 风险评估</h4>
+                            <ul>
+                                <li><strong>风险等级：</strong>${result.riskLevel === 'high' ? '高风险' : result.riskLevel === 'medium' ? '中风险' : '低风险'}</li>
+                                <li><strong>诈骗类型：</strong>${result.fraudType}</li>
+                                <li><strong>识别置信度：</strong>${(result.confidence * 100).toFixed(0)}%</li>
+                                <li><strong>触发关键词：</strong>${result.matchedKeywords.join('、') || '无'}</li>
+                            </ul>
+                        </div>
+            `;
+            
+            if (topCase) {
+                report += `
+                        <div class="report-section">
+                            <h4>📚 知识库匹配案例</h4>
+                            <ul>
+                                <li><strong>案例编号：</strong>${topCase.id}</li>
+                                <li><strong>案例类型：</strong>${topCase.type}</li>
+                                <li><strong>相似度：</strong>${(topCase.similarity * 100).toFixed(0)}%</li>
+                                <li><strong>真实案例：</strong>${topCase.case}</li>
+                            </ul>
+                        </div>
+                        <div class="report-section">
+                            <h4>⚖️ 法律法规依据</h4>
+                            <ul>
+                                <li>${topCase.law}</li>
+                            </ul>
+                        </div>
+                `;
+            }
+            
+            report += `
+                        <div class="report-section">
+                            <h4>🛡️ 防御指南</h4>
+                            <ul>
+                `;
+            
+            if (topCase) {
+                report += `<li>${topCase.defense}</li>`;
+            }
+            
+            // 通用防御建议
+            const generalDefense = [
+                "不轻信陌生人的电话、短信和网络消息",
+                "不点击不明链接，不扫描陌生二维码",
+                "不向陌生人转账、汇款",
+                "不泄露身份证号、银行卡号、验证码等个人信息",
+                "遇到可疑情况，及时与家人沟通或报警"
+            ];
+            
+            generalDefense.forEach(d => {
+                report += `<li>${d}</li>`;
+            });
+            
+            report += `
+                            </ul>
+                        </div>
+                        <div class="report-section">
+                            <h4>🔧 处理建议</h4>
+                            <ul>
+                `;
+            
+            if (result.riskLevel === 'high') {
+                report += `
+                                <li>🔴 立即停止任何转账操作</li>
+                                <li>🔴 拨打110报警或前往最近派出所</li>
+                                <li>🔴 联系银行冻结相关账户</li>
+                                <li>🔴 保存聊天记录、转账记录等证据</li>
+                `;
+            } else if (result.riskLevel === 'medium') {
+                report += `
+                                <li>🟡 暂停操作，与家人核实情况</li>
+                                <li>🟡 通过官方渠道验证信息真伪</li>
+                                <li>🟡 不进行任何转账或信息提供</li>
+                                <li>🟡 必要时拨打110咨询</li>
+                `;
+            } else {
+                report += `
+                                <li>🟢 保持正常警惕即可</li>
+                                <li>🟢 继续关注反诈知识学习</li>
+                                <li>🟢 遇到可疑情况及时求助</li>
+                `;
+            }
+            
+            report += `
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="report-footer">
+                        本报告由AI反诈骗大师自动生成，仅供参考。如遇诈骗，请立即报警。
+                    </div>
+                </div>
+            `;
+            
+            return report;
+        }
+        
+        // 开始分析
+        async function startAnalysis() {
+            const text = document.getElementById('inputText').value.trim();
+            if (!text) {
+                alert('请输入需要分析的文本内容');
+                return;
+            }
+            
+            const btn = document.getElementById('analyzeBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ 分析中...';
+            
+            // 显示结果区域
+            document.querySelectorAll('.result-section').forEach(el => {
+                el.classList.add('visible');
+            });
+            
+            // 步骤1: 文本预处理
+            updateFlowStep(1, 'active');
+            await delay(300);
+            updateFlowStep(2, 'active');
+            
+            const keywords = preprocessText(text);
+            
+            // 显示处理动画
+            document.getElementById('searchResults').innerHTML = `
+                <div class="processing">
+                    <div class="processing-spinner"></div>
+                    <p class="processing-text">正在进行向量检索...</p>
+                </div>
+            `;
+            document.getElementById('intentResult').innerHTML = `
+                <div class="processing">
+                    <div class="processing-spinner"></div>
+                    <p class="processing-text">正在识别意图...</p>
+                </div>
+            `;
+            
+            await delay(500);
+            
+            // 步骤2-4: 向量检索
+            updateFlowStep(3, 'active');
+            const searchResults = vectorSearch(text, keywords);
+            
+            await delay(300);
+            updateFlowStep(4, 'active');
+            
+            // 显示检索结果
+            let searchResultsHtml = '';
+            if (searchResults.length > 0) {
+                searchResults.forEach((result, index) => {
+                    searchResultsHtml += `
+                        <div class="search-result">
+                            <span class="similarity">相似度: ${(result.similarity * 100).toFixed(0)}%</span>
+                            <div class="case-id">案例编号: ${result.id} | 人群: ${result.group}</div>
+                            <div class="case-type">诈骗类型: ${result.type}</div>
+                            <div class="case-desc">${result.description}</div>
+                            <div style="margin-top: 8px;">
+                                ${result.matchedKeywords.map(kw => `<span class="tag tag-keyword">${kw}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                searchResultsHtml = `
+                    <div class="result-item">
+                        <h4>检索结果</h4>
+                        <div class="content">知识库中未匹配到相似案例</div>
+                    </div>
+                `;
+            }
+            document.getElementById('searchResults').innerHTML = searchResultsHtml;
+            
+            await delay(500);
+            
+            // 步骤5-6: 意图识别和风险判定
+            updateFlowStep(5, 'active');
+            const intentResult = analyzeIntent(text, keywords, searchResults);
+            
+            await delay(300);
+            updateFlowStep(6, 'active');
+            
+            // 显示意图识别结果
+            const riskColors = {
+                low: 'var(--accent-green)',
+                medium: 'var(--accent-yellow)',
+                high: 'var(--accent-red)'
+            };
+            const riskTexts = {
+                low: '低风险',
+                medium: '中等风险',
+                high: '高风险'
+            };
+            
+            document.getElementById('intentResult').innerHTML = `
+                <div class="result-item">
+                    <h4>意图识别结果</h4>
+                    <div class="content">
+                        <p><strong>识别类型：</strong>${intentResult.fraudType}</p>
+                        <p style="margin-top: 10px;"><strong>风险等级：</strong></p>
+                        <span class="risk-badge risk-${intentResult.riskLevel}">${riskTexts[intentResult.riskLevel]}</span>
+                        <p style="margin-top: 10px;"><strong>置信度：</strong>${(intentResult.confidence * 100).toFixed(0)}%</p>
+                        <p style="margin-top: 10px;"><strong>触发关键词：</strong></p>
+                        <div style="margin-top: 5px;">
+                            ${intentResult.matchedKeywords.map(kw => `<span class="tag tag-fraud">${kw}</span>`).join('') || '<span style="color: var(--text-secondary);">无敏感关键词</span>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            await delay(500);
+            
+            // 步骤7: 显示预警弹窗
+            updateFlowStep(7, 'active');
+            const alertData = generateAlert(intentResult.riskLevel, intentResult.fraudType);
+            
+            const alertContent = document.getElementById('alertContent');
+            alertContent.className = `alert-content ${alertData.class}`;
+            document.getElementById('alertIcon').textContent = alertData.icon;
+            document.getElementById('alertTitle').textContent = alertData.title;
+            document.getElementById('alertMessage').textContent = alertData.message;
+            document.getElementById('alertModal').classList.add('visible');
+            
+            // 等待用户关闭弹窗
+            await new Promise(resolve => {
+                window.closeAlertCallback = resolve;
+            });
+            
+            await delay(300);
+            
+            // 步骤8: 监护人通知
+            updateFlowStep(8, 'active');
+            document.getElementById('guardianNotification').innerHTML = generateGuardianNotification(intentResult, text);
+            
+            await delay(500);
+            
+            // 步骤9: 生成安全报告
+            updateFlowStep(9, 'active');
+            document.getElementById('securityReport').innerHTML = generateSecurityReport(intentResult, searchResults, text);
+            
+            // 完成
+            btn.disabled = false;
+            btn.textContent = '🚀 开始全流程分析';
+            
+            // 保存分析结果
+            analysisResult = {
+                text,
+                keywords,
+                searchResults,
+                intentResult,
+                timestamp: new Date().toISOString()
+            };
+        }
+        
+        function closeAlert() {
+            document.getElementById('alertModal').classList.remove('visible');
+            if (window.closeAlertCallback) {
+                window.closeAlertCallback();
+                window.closeAlertCallback = null;
+            }
+        }
+        
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+</html>
