@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, onLoad, onPullDownRefresh, onReachBottom } from 'vue'
+import { ref } from 'vue'
 import { getHistory } from '@/api/index.js'
 import RiskBadge from '@/components/risk-badge/risk-badge.vue'
 

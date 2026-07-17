@@ -1,0 +1,1 @@
+<view class="risk-badge data-v-c4e1c8db" style="{{'background-color:' + b}}"><text class="risk-text data-v-c4e1c8db">{{a}}</text></view>

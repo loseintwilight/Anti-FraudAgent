@@ -59,7 +59,7 @@
 </template>
 
 <script setup>
-import { ref, onShow } from 'vue'
+import { ref } from 'vue'
 import { useStore } from 'vuex'
 import { getUserProfile } from '@/api/index.js'
 

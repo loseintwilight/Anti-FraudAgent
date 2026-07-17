@@ -91,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, onLoad } from 'vue'
+import { ref } from 'vue'
 import { getReport } from '@/api/index.js'
 import RiskBadge from '@/components/risk-badge/risk-badge.vue'
 

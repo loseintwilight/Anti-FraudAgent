@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "反诈卫士",
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "chat-input": "../../components/chat-input/chat-input",
+    "risk-badge": "../../components/risk-badge/risk-badge"
+  }
+}

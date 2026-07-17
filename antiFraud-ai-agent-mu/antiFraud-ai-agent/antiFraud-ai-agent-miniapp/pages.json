@@ -43,21 +43,15 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "检测",
-        "iconPath": "static/tab-detection.png",
-        "selectedIconPath": "static/tab-detection-active.png"
+        "text": "检测"
       },
       {
         "pagePath": "pages/history/index",
-        "text": "历史",
-        "iconPath": "static/tab-history.png",
-        "selectedIconPath": "static/tab-history-active.png"
+        "text": "历史"
       },
       {
         "pagePath": "pages/profile/index",
-        "text": "我的",
-        "iconPath": "static/tab-profile.png",
-        "selectedIconPath": "static/tab-profile-active.png"
+        "text": "我的"
       }
     ]
   }

@@ -1,0 +1,108 @@
+
+.page-container.data-v-b37acf1c {
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
+.loading-container.data-v-b37acf1c {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+}
+.loading-text.data-v-b37acf1c {
+  font-size: 28rpx;
+  color: #909399;
+}
+.empty-container.data-v-b37acf1c {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+}
+.empty-icon.data-v-b37acf1c {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+}
+.empty-text.data-v-b37acf1c {
+  font-size: 32rpx;
+  color: #333;
+  margin-bottom: 12rpx;
+}
+.empty-desc.data-v-b37acf1c {
+  font-size: 26rpx;
+  color: #909399;
+  margin-bottom: 40rpx;
+}
+.go-btn.data-v-b37acf1c {
+  width: 200rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  background-color: #409EFF;
+  color: #ffffff;
+  border-radius: 36rpx;
+  font-size: 28rpx;
+  border: none;
+  padding: 0;
+}
+.list-scroll.data-v-b37acf1c {
+  height: 100vh;
+  padding: 24rpx 32rpx;
+}
+.history-item.data-v-b37acf1c {
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  padding: 28rpx 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+.item-header.data-v-b37acf1c {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+.item-time.data-v-b37acf1c {
+  font-size: 24rpx;
+  color: #909399;
+}
+.item-content.data-v-b37acf1c {
+  margin-bottom: 16rpx;
+}
+.content-text.data-v-b37acf1c {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.item-footer.data-v-b37acf1c {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+.item-score.data-v-b37acf1c {
+  font-size: 24rpx;
+  color: #909399;
+}
+.item-arrow.data-v-b37acf1c {
+  font-size: 28rpx;
+  color: #c0c4cc;
+}
+.load-more.data-v-b37acf1c {
+  text-align: center;
+  padding: 24rpx 0 48rpx;
+}
+.load-more-text.data-v-b37acf1c {
+  font-size: 24rpx;
+  color: #909399;
+}
+.no-more.data-v-b37acf1c {
+  color: #c0c4cc;
+}
