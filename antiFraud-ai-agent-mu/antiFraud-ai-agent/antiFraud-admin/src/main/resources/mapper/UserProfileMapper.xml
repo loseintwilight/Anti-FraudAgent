@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.antifraud.admin.mapper.UserProfileMapper">
+
+    <resultMap id="UserProfileResult" type="com.antifraud.admin.domain.UserProfile">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="age" column="age"/>
+        <result property="gender" column="gender"/>
+        <result property="occupation" column="occupation"/>
+        <result property="education" column="education"/>
+        <result property="province" column="province"/>
+        <result property="city" column="city"/>
+        <result property="riskScore" column="risk_score"/>
+        <result property="riskLevel" column="risk_level"/>
+        <result property="profileJson" column="profile_json"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="selectUserProfileVo">
+        SELECT id, user_id, age, gender, occupation, education, province, city, risk_score, risk_level, profile_json, created_at, updated_at
+        FROM user_profile
+    </sql>
+
+    <select id="selectUserProfileList" parameterType="com.antifraud.admin.domain.UserProfile" resultMap="UserProfileResult">
+        <include refid="selectUserProfileVo"/>
+        <where>
+            <if test="userId != null and userId != ''">
+                AND user_id = #{userId}
+            </if>
+            <if test="riskLevel != null and riskLevel != ''">
+                AND risk_level = #{riskLevel}
+            </if>
+            <if test="gender != null and gender != ''">
+                AND gender = #{gender}
+            </if>
+            <if test="province != null and province != ''">
+                AND province = #{province}
+            </if>
+        </where>
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectUserProfileById" parameterType="Long" resultMap="UserProfileResult">
+        <include refid="selectUserProfileVo"/>
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insertUserProfile" parameterType="com.antifraud.admin.domain.UserProfile" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_profile (user_id, age, gender, occupation, education, province, city, risk_score, risk_level, profile_json, created_at, updated_at)
+        VALUES (#{userId}, #{age}, #{gender}, #{occupation}, #{education}, #{province}, #{city}, #{riskScore}, #{riskLevel}, #{profileJson}, NOW(), NOW())
+    </insert>
+
+    <update id="updateUserProfile" parameterType="com.antifraud.admin.domain.UserProfile">
+        UPDATE user_profile
+        <set>
+            <if test="age != null">age = #{age},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="occupation != null">occupation = #{occupation},</if>
+            <if test="education != null">education = #{education},</if>
+            <if test="province != null">province = #{province},</if>
+            <if test="city != null">city = #{city},</if>
+            <if test="riskScore != null">risk_score = #{riskScore},</if>
+            <if test="riskLevel != null">risk_level = #{riskLevel},</if>
+            <if test="profileJson != null">profile_json = #{profileJson},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteUserProfileById" parameterType="Long">
+        DELETE FROM user_profile WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteUserProfileByIds" parameterType="Long">
+        DELETE FROM user_profile WHERE id IN
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

@@ -6,7 +6,6 @@ import AiAvatar from '../components/AiAvatar.vue'
 <template>
   <div class="home">
     <section class="hero">
-      <p class="eyebrow">YU AI Agent</p>
       <h1 class="title">选择应用</h1>
       <p class="desc">统一聊天体验，支持流式回复与多端适配。</p>
     </section>
@@ -16,14 +15,14 @@ import AiAvatar from '../components/AiAvatar.vue'
         <div class="card-top">
           <AiAvatar variant="fraud" size="lg" />
           <div class="card-headings">
-            <h2>AI 反诈骗大师</h2>
-            <p class="card-sub">防骗建议 · SSE 流式</p>
+            <h2>反诈卫士</h2>
+            <p class="card-sub">防骗建议 | SSE 流式</p>
           </div>
         </div>
         <p class="card-body">按会话 ID 记忆上下文，帮你分析各种诈骗套路并给出应对建议。</p>
         <span class="card-cta">
           进入应用
-          <span class="card-cta-arrow" aria-hidden="true">→</span>
+          <span class="card-cta-arrow" aria-hidden="true">&#8594;</span>
         </span>
       </RouterLink>
 
@@ -32,13 +31,13 @@ import AiAvatar from '../components/AiAvatar.vue'
           <AiAvatar variant="manus" size="lg" />
           <div class="card-headings">
             <h2>AI 超级智能体</h2>
-            <p class="card-sub">多步推理 · 实时推送</p>
+            <p class="card-sub">多步推理 | 实时推送</p>
           </div>
         </div>
         <p class="card-body">AntiFraudManus 智能体逐步执行并推送步骤结果。</p>
         <span class="card-cta">
           进入应用
-          <span class="card-cta-arrow" aria-hidden="true">→</span>
+          <span class="card-cta-arrow" aria-hidden="true">&#8594;</span>
         </span>
       </RouterLink>
     </div>
@@ -53,30 +52,26 @@ import AiAvatar from '../components/AiAvatar.vue'
   display: flex;
   flex-direction: column;
   gap: clamp(1.5rem, 4vw, 2.25rem);
+  padding: 2rem 1rem;
 }
 
 .hero {
-  text-align: center;
+  text-align: left;
   padding: 0 0.25rem;
-}
-
-.eyebrow {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin: 0 0 0.5rem;
 }
 
 .title {
   margin: 0 0 0.5rem;
+  color: #111111;
+  font-size: clamp(1.65rem, 4vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 .desc {
-  margin: 0 auto;
+  margin: 0;
   max-width: 26rem;
-  color: var(--text-muted);
+  color: #5a6a7e;
   font-size: 0.95rem;
   line-height: 1.55;
 }
@@ -98,35 +93,28 @@ import AiAvatar from '../components/AiAvatar.vue'
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  padding: 1.25rem 1.2rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: var(--surface);
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(74, 144, 217, 0.14);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   text-decoration: none;
   color: inherit;
   text-align: left;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
-  box-shadow: 0 1px 0 rgba(15, 13, 20, 0.04);
-}
-
-@media (prefers-color-scheme: dark) {
-  .card {
-    box-shadow: none;
-    background: color-mix(in srgb, var(--surface) 100%, #000 4%);
-  }
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 12px rgba(74, 144, 217, 0.05);
 }
 
 .card:hover {
-  border-color: var(--accent-border);
-  box-shadow: var(--shadow);
-  transform: translateY(-2px);
+  border-color: rgba(74, 144, 217, 0.4);
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(74, 144, 217, 0.15);
 }
 
 .card:active {
-  transform: translateY(0);
+  transform: translateY(-1px);
 }
 
 .card-top {
@@ -144,12 +132,15 @@ import AiAvatar from '../components/AiAvatar.vue'
 
 .card-headings h2 {
   margin: 0 0 0.2rem;
+  color: #111111;
+  font-size: 1.15rem;
+  font-weight: 600;
 }
 
 .card-sub {
   margin: 0;
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: #5a6a7e;
   font-weight: 500;
 }
 
@@ -158,7 +149,7 @@ import AiAvatar from '../components/AiAvatar.vue'
   margin: 0 0 1rem;
   font-size: 0.9rem;
   line-height: 1.55;
-  color: var(--text);
+  color: #5a6a7e;
 }
 
 .card-cta {
@@ -167,7 +158,7 @@ import AiAvatar from '../components/AiAvatar.vue'
   gap: 0.35rem;
   font-weight: 600;
   font-size: 0.88rem;
-  color: var(--accent);
+  color: #4A90D9;
 }
 
 .card-cta-arrow {

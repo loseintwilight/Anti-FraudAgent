@@ -3,6 +3,147 @@
  * 负责 popup 页面的交互逻辑、API 调用、结果展示
  */
 
+// ===== 登录状态 =====
+const LOGIN_STORAGE_KEY = 'antiFraud_auth'
+
+function getAuth() {
+  try {
+    const data = localStorage.getItem(LOGIN_STORAGE_KEY)
+    return data ? JSON.parse(data) : null
+  } catch { return null }
+}
+
+function setAuth(token, username) {
+  localStorage.setItem(LOGIN_STORAGE_KEY, JSON.stringify({ token, username, loginTime: Date.now() }))
+}
+
+function clearAuth() {
+  localStorage.removeItem(LOGIN_STORAGE_KEY)
+}
+
+function isLoggedIn() {
+  const auth = getAuth()
+  return auth && auth.token
+}
+
+// 登录/注册 UI 控制
+const loginOverlay = document.getElementById('loginOverlay')
+const loginForm = document.querySelector('.login-form')
+const registerForm = document.getElementById('registerForm')
+const loginBtn = document.getElementById('loginBtn')
+const registerBtn = document.getElementById('registerBtn')
+const registerLink = document.getElementById('registerLink')
+const backToLoginLink = document.getElementById('backToLoginLink')
+const loginError = document.getElementById('loginError')
+const regError = document.getElementById('regError')
+
+// 切换登录/注册表单
+registerLink.addEventListener('click', (e) => {
+  e.preventDefault()
+  loginForm.style.display = 'none'
+  registerForm.style.display = 'block'
+  hideError(loginError)
+})
+
+backToLoginLink.addEventListener('click', (e) => {
+  e.preventDefault()
+  loginForm.style.display = 'block'
+  registerForm.style.display = 'none'
+  hideError(regError)
+})
+
+function showError(el, msg) {
+  el.textContent = msg
+  el.style.display = 'block'
+}
+
+function hideError(el) {
+  el.style.display = 'none'
+  el.textContent = ''
+}
+
+// 登录
+loginBtn.addEventListener('click', async () => {
+  const username = document.getElementById('loginUsername').value.trim()
+  const password = document.getElementById('loginPassword').value.trim()
+  if (!username || !password) {
+    showError(loginError, '请输入用户名和密码')
+    return
+  }
+  hideError(loginError)
+  loginBtn.disabled = true
+  loginBtn.textContent = '登录中...'
+  
+  try {
+    const res = await api.login(username, password)
+    if (res.success) {
+      setAuth(res.token, username)
+      checkLoginState()
+    } else {
+      showError(loginError, res.message || '登录失败')
+    }
+  } catch (err) {
+    showError(loginError, err.message || '登录失败，请重试')
+  } finally {
+    loginBtn.disabled = false
+    loginBtn.textContent = '登 录'
+  }
+})
+
+// 注册
+registerBtn.addEventListener('click', async () => {
+  const username = document.getElementById('regUsername').value.trim()
+  const password = document.getElementById('regPassword').value.trim()
+  const confirm = document.getElementById('regConfirm').value.trim()
+  
+  hideError(regError)
+  if (!username || !password || !confirm) {
+    showError(regError, '请填写所有字段')
+    return
+  }
+  if (password.length < 6) {
+    showError(regError, '密码长度不少于6位')
+    return
+  }
+  if (password !== confirm) {
+    showError(regError, '两次密码不一致')
+    return
+  }
+  
+  registerBtn.disabled = true
+  registerBtn.textContent = '注册中...'
+  
+  try {
+    const res = await api.register(username, password)
+    if (res.success) {
+      loginForm.style.display = 'block'
+      registerForm.style.display = 'none'
+      document.getElementById('loginUsername').value = username
+      showError(loginError, '注册成功，请登录')
+    } else {
+      showError(regError, res.message || '注册失败')
+    }
+    registerBtn.textContent = '注 册'
+    registerBtn.disabled = false
+  } catch (err) {
+    showError(regError, err.message || '注册失败')
+    registerBtn.disabled = false
+    registerBtn.textContent = '注 册'
+  }
+})
+
+// 检查登录状态并显示/隐藏覆盖层
+function checkLoginState() {
+  if (isLoggedIn()) {
+    loginOverlay.style.display = 'none'
+  } else {
+    loginOverlay.style.display = 'flex'
+  }
+}
+
+// 在页面加载时检查登录状态
+checkLoginState()
+
 // ========== DOM 引用 ==========
 const DOM = {
   pageTitle: document.getElementById('pageTitle'),
@@ -356,6 +497,15 @@ function initEvents() {
       alert(`最近检测记录 (共 ${history.length} 条):\n\n${historyText}`);
     });
   });
+
+  // 退出登录按钮
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    clearAuth()
+    checkLoginState()
+    // 清空输入框
+    document.getElementById('loginUsername').value = ''
+    document.getElementById('loginPassword').value = ''
+  })
 
   // 设置按钮
   DOM.settingsBtn.addEventListener('click', () => {

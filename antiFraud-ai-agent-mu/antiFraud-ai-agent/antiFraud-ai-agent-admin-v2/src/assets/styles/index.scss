@@ -1,0 +1,79 @@
+/* 全局样式 */
+:root {
+  --primary-color: #165DFF;
+  --primary-hover: #1a6aff;
+  --primary-light: rgba(22, 93, 255, 0.1);
+  --sidebar-bg: #001529;
+  --sidebar-text: #bfcbd9;
+  --sidebar-active-text: #ffffff;
+  --sidebar-active-bg: var(--primary-color);
+  --header-bg: #ffffff;
+  --header-height: 60px;
+  --sidebar-width: 220px;
+  --sidebar-collapsed-width: 64px;
+  --bg-color: #f0f2f5;
+  --text-primary: #1a1a1a;
+  --text-secondary: #606266;
+  --text-muted: #909399;
+  --border-color: #e4e7ed;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d0d5dd;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b0b5bd;
+}
+
+/* 卡片通用样式 */
+.card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+}
+
+/* 页面标题 */
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}

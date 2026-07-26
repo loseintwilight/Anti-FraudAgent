@@ -1,31 +1,26 @@
 package com.antifraudqi.antifraudaiagent.service;
 
-import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
-import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
-import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
-import com.alibaba.dashscope.common.MultiModalMessage;
-import com.alibaba.dashscope.common.Role;
-import com.alibaba.dashscope.exception.ApiException;
-import com.alibaba.dashscope.exception.NoApiKeyException;
-import com.alibaba.dashscope.exception.UploadFileException;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 
+/**
+ * 视频分析服务
+ * 调用 Python LangChain 微服务进行视觉大模型分析
+ */
 @Service
 @Slf4j
 public class QwenVLVideoAnalysisService {
 
-    @Value("${spring.ai.dashscope.api-key}")
-    private String dashScopeApiKey;
+    @Value("${python.service.url}")
+    private String pythonServiceUrl;
 
-    @Value("${spring.ai.dashscope.vision.model:qwen-vl-max}")
-    private String visionModel;
-
-    private static final MultiModalConversation MULTI_MODAL_CONVERSATION = new MultiModalConversation();
+    @Resource
+    private RestTemplate restTemplate;
 
     private static final String VIDEO_ANALYSIS_PROMPT = """
         【重要】你是一个专业的反诈骗视频内容分析助手。请严格按照以下步骤分析视频画面：
@@ -58,50 +53,26 @@ public class QwenVLVideoAnalysisService {
 
     public String analyzeImage(String imageBase64) {
         try {
-            String imageDataUrl = "data:image/jpeg;base64," + imageBase64;
+            // 调用 Python 微服务视觉分析接口
+            String url = pythonServiceUrl + "/api/v1/ai/vision/analyze";
+            Map<String, Object> body = new HashMap<>();
+            body.put("image_base64", imageBase64);
+            body.put("prompt", VIDEO_ANALYSIS_PROMPT);
 
-            MultiModalMessage userMessage = MultiModalMessage.builder()
-                    .role(Role.USER.getValue())
-                    .content(Arrays.asList(
-                            Collections.singletonMap("image", imageDataUrl),
-                            Collections.singletonMap("text", VIDEO_ANALYSIS_PROMPT)
-                    )).build();
+            log.info("调用 Python 微服务视觉大模型进行图片分析...");
+            Map<String, Object> response = restTemplate.postForObject(url, body, Map.class);
 
-            MultiModalConversationParam param = MultiModalConversationParam.builder()
-                    .apiKey(dashScopeApiKey)
-                    .model(visionModel)
-                    .message(userMessage)
-                    .build();
-
-            log.info("调用视觉大模型 {} 进行图片分析...", visionModel);
-            MultiModalConversationResult result = MULTI_MODAL_CONVERSATION.call(param);
-
-            String explanation = Optional.ofNullable(result.getOutput())
-                    .map(output -> output.getChoices().get(0))
-                    .map(choice -> choice.getMessage())
-                    .map(message -> message.getContent().get(0))
-                    .map(content -> (String) content.get("text"))
-                    .orElse(null);
-
-            if (explanation != null && !explanation.isEmpty()) {
-                log.info("视觉大模型图片分析成功: {}", explanation);
-                return explanation;
+            if (response != null && response.containsKey("text")) {
+                String result = (String) response.get("text");
+                log.info("视觉大模型图片分析成功");
+                return result;
             }
 
             log.warn("视觉大模型返回空结果，使用备用方案");
             return getFallbackResult();
 
-        } catch (NoApiKeyException e) {
-            log.error("DashScope API Key 未配置", e);
-            return getFallbackResult();
-        } catch (UploadFileException e) {
-            log.error("图片上传失败", e);
-            return getFallbackResult();
-        } catch (ApiException e) {
-            log.error("DashScope API 调用失败", e);
-            return getFallbackResult();
         } catch (Exception e) {
-            log.error("视觉大模型分析异常", e);
+            log.error("调用 Python 微服务视觉分析失败", e);
             return getFallbackResult();
         }
     }

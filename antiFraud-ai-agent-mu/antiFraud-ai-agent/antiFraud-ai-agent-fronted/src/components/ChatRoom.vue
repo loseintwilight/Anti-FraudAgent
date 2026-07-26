@@ -5,11 +5,11 @@ import UserAvatar from './UserAvatar.vue'
 import { buildApiUrl, consumeEventStream } from '../api/sse.js'
 
 const props = defineProps({
-  title: { type: String, default: '反诈小卫士' },
+  title: { type: String, default: '反诈卫士' },
 })
 
 const STORAGE_KEY = 'antiFraud-ai-fraud-sessions-v1'
-const WELCOME_MESSAGE = '你好呀～我是你的专属反诈小卫士！我支持文字、图片、音频、视频输入，会帮你识别各类诈骗陷阱，守护你的财产安全。有任何诈骗相关问题都可以随时告诉我哦！'
+const WELCOME_MESSAGE = '你好呀～我是你的专属反诈卫士！我支持文字、图片、音频、视频输入，会帮你识别各类诈骗陷阱，守护你的财产安全。有任何诈骗相关问题都可以随时告诉我哦！'
 
 const sessions = ref([])
 const activeSessionId = ref('')
@@ -33,6 +33,9 @@ const renameInputValue = ref('')
 const showRiskModal = ref(false)
 const showMediumRiskModal = ref(false)
 const riskResult = ref(null)
+const persuasionMessage = ref('') // AI劝导话术
+const showPersuasion = ref(false) // 劝导显示标志
+const reportGenerated = ref(false) // 报告生成标志
 const guardianPhone = '138****5678'
 
 // 删除确认弹窗状态
@@ -1437,6 +1440,26 @@ function detectImageRisk(text) {
   return result
 }
 
+// ==================== AI劝导话术 ====================
+const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8123/api'
+
+async function fetchPersuasion(fraudType, riskLevel, userRole) {
+  try {
+    const res = await fetch(`${API_BASE}/persuasion/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fraudType, riskLevel, userRole }),
+    })
+    const data = await res.json()
+    if (data.success && data.message) {
+      return data.message
+    }
+  } catch (e) {
+    console.warn('获取劝导话术失败:', e)
+  }
+  return null
+}
+
 // ==================== 分级响应处理函数 ====================
 function handleRiskResult(result, text, session) {
   if (!session) return
@@ -1476,7 +1499,7 @@ function handleRiskResult(result, text, session) {
     return
   }
 
-  // ========== 高风险：弹窗预警 + 安全监测报告 + 监护人联动（保持现有逻辑不变） ==========
+  // ========== 高风险：弹窗预警 + 安全监测报告 + 监护人联动 + AI劝导 ==========
   if (result.riskLevel === 'high') {
     console.log('🚨 高风险场景，触发完整预警流程')
     // 保存风险记忆
@@ -1492,6 +1515,16 @@ function handleRiskResult(result, text, session) {
       role: 'system',
       type: 'text',
       content: `🚨 已向监护人 ${guardianPhone} 发送高危预警`,
+    })
+    // 获取AI劝导话术
+    reportGenerated.value = false
+    showPersuasion.value = false
+    persuasionMessage.value = ''
+    fetchPersuasion(result.fraudType, result.riskLevel, result.userRole || 'default').then(msg => {
+      if (msg) {
+        persuasionMessage.value = msg
+        showPersuasion.value = true
+      }
     })
     // 显示风险弹窗
     showRiskModal.value = true
@@ -1548,6 +1581,8 @@ function generateSecurityReport() {
 
   // 构建安全报告内容（仅高风险时生成完整报告）
   let reportContent = '🛡️ **安全监测报告**\n\n'
+
+  reportGenerated.value = true
   
   // 如果角色是自动识别的，显示识别提示
   if (result.roleDetected) {
@@ -1571,6 +1606,11 @@ function generateSecurityReport() {
     // 防御指南
     if (result.matchedCases?.[0]?.defense) {
       reportContent += `\n🛡️ **防御指南**\n${result.matchedCases[0].defense}\n`
+    }
+
+    // 添加AI劝导话术（新功能）
+    if (persuasionMessage.value) {
+      reportContent += `\n💬 **AI劝导话术**\n${persuasionMessage.value}\n`
     }
 
     reportContent += '\n💡 **温馨提示**\n'
@@ -1791,7 +1831,7 @@ function getFallbackReply(text, riskResult) {
   const roleLabel = roleOptions.find(r => r.value === riskResult.userRole)?.label || '中青年'
   
   if (riskResult.scene === 'chat') {
-    return `你好呀～我是你的专属反诈小卫士！有什么我可以帮你的吗？`
+    return `你好呀～我是你的专属反诈卫士！有什么我可以帮你的吗？`
   }
   
   if (riskResult.scene === 'knowledge') {
@@ -1842,7 +1882,7 @@ onUnmounted(() => {
   <div class="doubao-layout" @click="closeAllMenus">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h2 class="sidebar-title">反诈小卫士</h2>
+        <h2 class="sidebar-title">反诈卫士</h2>
         <button class="new-chat" type="button" @click="openNewSession">+ 新对话</button>
       </div>
       <div class="session-list">
@@ -2169,9 +2209,20 @@ onUnmounted(() => {
           <div v-if="riskResult?.riskLevel === 'high'" class="guardian-notice">
             <p>📱 已自动向监护人 <strong>{{ guardianPhone }}</strong> 发送高危预警通知</p>
           </div>
+          
+          <!-- AI劝导话术（高风险显示，异步加载） -->
+          <div v-if="showPersuasion && persuasionMessage" class="persuasion-section">
+            <div class="persuasion-header">
+              <span class="persuasion-icon">💬</span>
+              <span class="persuasion-label">AI 劝导话术</span>
+            </div>
+            <div class="persuasion-content">{{ persuasionMessage }}</div>
+          </div>
         </div>
         <div class="risk-modal-footer">
-          <button class="btn btn-primary" @click="closeRiskModalAndReply">我知道了</button>
+          <button class="btn btn-primary" @click="closeRiskModalAndReply">
+            {{ reportGenerated ? '已生成报告' : '生成安全报告' }}
+          </button>
         </div>
       </div>
     </div>
@@ -2236,17 +2287,36 @@ onUnmounted(() => {
 <style scoped>
 /* ==================== 整体布局 ==================== */
 .doubao-layout {
+  position: relative;
   height: 100dvh;
   height: 100svh;
   display: grid;
   grid-template-columns: 220px 1fr;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: #FBFBFA;
+  color: #2F3437;
+}
+
+.doubao-layout::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url('/src/assets/chat-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.2;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* ==================== 左侧导航栏 ==================== */
 .sidebar {
-  border-right: 1px solid #e2e8f0;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  position: relative;
+  z-index: 2;
+  border-right: 1px solid rgba(74, 144, 217, 0.10);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -2254,19 +2324,20 @@ onUnmounted(() => {
 
 .sidebar-header {
   padding: 0.85rem 0.9rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid rgba(74, 144, 217, 0.08);
 }
 
 .sidebar-title {
   margin: 0 0 0.6rem;
   font-size: 0.95rem;
-  color: #1e293b;
+  color: #2F3437;
+  font-weight: 600;
 }
 
 .new-chat {
   width: 100%;
-  border: 1px solid #3b82f6;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, #4A90D9, #357ABD);
   color: #fff;
   border-radius: 8px;
   height: 2.1rem;
@@ -2277,8 +2348,9 @@ onUnmounted(() => {
 }
 
 .new-chat:hover {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: linear-gradient(135deg, #5B9EE0, #3D86C9);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 144, 217, 0.3);
 }
 
 .session-list {
@@ -2296,7 +2368,7 @@ onUnmounted(() => {
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
-  color: #334155;
+  color: #5a6a7e;
   text-align: left;
   padding: 0.5rem 0.6rem;
   cursor: pointer;
@@ -2307,7 +2379,7 @@ onUnmounted(() => {
 }
 
 .session-item:hover {
-  background: #f1f5f9;
+  background: rgba(74, 144, 217, 0.08);
 }
 
 .session-item:hover .session-menu-btn {
@@ -2315,8 +2387,9 @@ onUnmounted(() => {
 }
 
 .session-item--active {
-  border-color: #3b82f6;
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-color: rgba(74, 144, 217, 0.3);
+  background: rgba(74, 144, 217, 0.12);
+  color: #2F3437;
 }
 
 .pin-icon {
@@ -2335,8 +2408,8 @@ onUnmounted(() => {
 .session-menu-btn {
   opacity: 0;
   border: none;
-  background: #e2e8f0;
-  color: #64748b;
+  background: rgba(74, 144, 217, 0.1);
+  color: #5a6a7e;
   border-radius: 5px;
   width: 1.5rem;
   height: 1.5rem;
@@ -2350,7 +2423,7 @@ onUnmounted(() => {
 }
 
 .session-menu-btn:hover {
-  background: #3b82f6;
+  background: rgba(74, 144, 217, 0.5);
   color: #fff;
 }
 
@@ -2360,19 +2433,20 @@ onUnmounted(() => {
   top: 100%;
   z-index: 100;
   min-width: 5rem;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: rgba(20, 24, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   padding: 0.25rem 0;
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(12px);
 }
 
 .menu-item {
   border: none;
   background: transparent;
-  color: #334155;
+  color: rgba(255, 255, 255, 0.7);
   text-align: left;
   padding: 0.45rem 0.7rem;
   font-size: 0.78rem;
@@ -2381,7 +2455,7 @@ onUnmounted(() => {
 }
 
 .menu-item:hover {
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .menu-item--danger {
@@ -2389,14 +2463,14 @@ onUnmounted(() => {
 }
 
 .menu-item--danger:hover {
-  background: #fef2f2;
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .rename-input {
   flex: 1;
-  border: 1px solid #3b82f6;
-  background: #fff;
-  color: #334155;
+  border: 1px solid rgba(22, 93, 255, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
   border-radius: 5px;
   padding: 0.25rem 0.4rem;
   font-size: 0.82rem;
@@ -2406,10 +2480,12 @@ onUnmounted(() => {
 
 /* ==================== 主聊天区域 ==================== */
 .chat-main {
+  position: relative;
+  z-index: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: transparent;
 }
 
 .chat-header {
@@ -2417,26 +2493,28 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.7rem;
   padding: 0.7rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
-  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  border-bottom: 1px solid rgba(74, 144, 217, 0.10);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .chat-header-text h1 {
   margin: 0;
   font-size: 1rem;
-  color: #1e293b;
+  color: #2F3437;
 }
 
 .chat-header-text p {
   margin-top: 0.15rem;
-  color: #64748b;
+  color: #787774;
   font-size: 0.78rem;
 }
 
 /* ==================== 自适应进化状态 ==================== */
 .evolution-status {
-  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-  border-bottom: 1px solid #86efac;
+  background: rgba(74, 144, 217, 0.06);
+  border-bottom: 1px solid rgba(74, 144, 217, 0.12);
   padding: 0.35rem 1rem;
   display: flex;
   align-items: center;
@@ -2445,7 +2523,7 @@ onUnmounted(() => {
 }
 
 .evolution-badge {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
+  background: linear-gradient(135deg, #4A90D9, #357ABD);
   color: #fff;
   padding: 0.2rem 0.55rem;
   border-radius: 12px;
@@ -2467,7 +2545,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.2rem;
   font-size: 0.72rem;
-  color: #166534;
+  color: #5a6a7e;
 }
 
 .evolution-item .status-icon {
@@ -2475,12 +2553,12 @@ onUnmounted(() => {
 }
 
 .evolution-item .status-count {
-  background: #bbf7d0;
+  background: rgba(74, 144, 217, 0.15);
   padding: 0.1rem 0.35rem;
   border-radius: 8px;
   font-size: 0.68rem;
   font-weight: 500;
-  color: #15803d;
+  color: #1F6C9F;
   margin-left: 0.15rem;
 }
 
@@ -2493,13 +2571,28 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  background: transparent;
+  position: relative;
+}
+
+.message-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.0) 0%, rgba(255, 255, 255, 0.35) 100%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .message-row {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .message-row--user {
@@ -2511,14 +2604,14 @@ onUnmounted(() => {
 }
 
 .system-message {
-  background: linear-gradient(135deg, #fef9c3, #fde047);
-  color: #854d0e;
+  background: rgba(74, 144, 217, 0.1);
+  color: #5a6a7e;
   padding: 6px 14px;
   border-radius: 16px;
   font-size: 0.8rem;
   text-align: center;
   max-width: 80%;
-  border: 1px solid #facc15;
+  border: 1px solid rgba(74, 144, 217, 0.18);
 }
 
 .avatar-wrap {
@@ -2529,18 +2622,24 @@ onUnmounted(() => {
 .message-bubble {
   max-width: min(75%, 42rem);
   padding: 0.6rem 0.75rem;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  border: 1px solid rgba(74, 144, 217, 0.12);
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(74, 144, 217, 0.06);
 }
 
 .message-bubble--assistant {
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  border-color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(74, 144, 217, 0.18);
 }
 
 .message-bubble--user {
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-  border-color: #93c5fd;
+  background: linear-gradient(135deg, rgba(74, 144, 217, 0.12), rgba(123, 104, 238, 0.12));
+  border-color: rgba(74, 144, 217, 0.3);
 }
 
 .message-text {
@@ -2548,7 +2647,7 @@ onUnmounted(() => {
   white-space: pre-wrap;
   word-break: break-word;
   font-size: 0.88rem;
-  color: #1e293b;
+  color: #2F3437;
   line-height: 1.5;
 }
 
@@ -2640,14 +2739,18 @@ onUnmounted(() => {
 
 .audio-duration {
   font-size: 0.72rem;
-  color: #64748b;
+  color: #787774;
 }
 
 /* ==================== 底部输入区域 ==================== */
 .composer {
-  border-top: 1px solid #e2e8f0;
+  position: relative;
+  z-index: 2;
+  border-top: 1px solid rgba(74, 144, 217, 0.12);
   padding: 0.5rem 0.8rem 0.6rem;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .role-selector {
@@ -2656,14 +2759,14 @@ onUnmounted(() => {
   gap: 0.5rem;
   margin-bottom: 0.5rem;
   padding: 0.4rem 0.7rem;
-  background: #ffffff;
+  background: rgba(74, 144, 217, 0.06);
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(74, 144, 217, 0.14);
 }
 
 .role-label {
   font-size: 0.8rem;
-  color: #374151;
+  color: #5a6a7e;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -2679,10 +2782,10 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0.35rem 0.7rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid rgba(74, 144, 217, 0.18);
   border-radius: 8px;
-  background: #fff;
-  color: #374151;
+  background: rgba(255, 255, 255, 0.7);
+  color: #2F3437;
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -2692,13 +2795,13 @@ onUnmounted(() => {
 }
 
 .role-dropdown-selected:hover {
-  border-color: #9ca3af;
-  background: #f9fafb;
+  border-color: rgba(74, 144, 217, 0.4);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .role-dropdown-selected--open {
-  border-color: #9ca3af;
-  background: #f9fafb;
+  border-color: rgba(74, 144, 217, 0.5);
+  background: rgba(74, 144, 217, 0.08);
 }
 
 .role-dropdown-selected-content {
@@ -2724,7 +2827,7 @@ onUnmounted(() => {
 
 .role-dropdown-arrow {
   font-size: 0.65rem;
-  color: #94a3b8;
+  color: #5a6a7e;
   transition: transform 0.2s;
   margin-left: 0.25rem;
 }
@@ -2738,15 +2841,17 @@ onUnmounted(() => {
   top: calc(100% + 4px);
   left: 0;
   width: 100%;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(74, 144, 217, 0.18);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 32px rgba(74, 144, 217, 0.12);
   z-index: 100;
   max-height: 160px;
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .role-dropdown-menu::-webkit-scrollbar {
@@ -2754,17 +2859,17 @@ onUnmounted(() => {
 }
 
 .role-dropdown-menu::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: transparent;
   border-radius: 2px;
 }
 
 .role-dropdown-menu::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: rgba(74, 144, 217, 0.25);
   border-radius: 2px;
 }
 
 .role-dropdown-menu::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: rgba(74, 144, 217, 0.4);
 }
 
 .role-dropdown-item {
@@ -2774,7 +2879,7 @@ onUnmounted(() => {
   padding: 0.4rem 0.6rem;
   cursor: pointer;
   transition: all 0.15s;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid rgba(74, 144, 217, 0.08);
   white-space: nowrap;
 }
 
@@ -2783,11 +2888,11 @@ onUnmounted(() => {
 }
 
 .role-dropdown-item:hover {
-  background: #f9fafb;
+  background: rgba(74, 144, 217, 0.08);
 }
 
 .role-dropdown-item--active {
-  background: #f3f4f6;
+  background: rgba(74, 144, 217, 0.12);
   font-weight: 500;
 }
 
@@ -2801,13 +2906,13 @@ onUnmounted(() => {
 .role-dropdown-item-label {
   font-size: 0.8rem;
   font-weight: 500;
-  color: #374151;
+  color: #2F3437;
   white-space: nowrap;
 }
 
 .role-dropdown-item--active .role-dropdown-item-label {
-  color: #1f2937;
-  font-weight: 500;
+  color: #1F6C9F;
+  font-weight: 600;
 }
 
 .hidden-input {
@@ -2861,7 +2966,8 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.5rem;
-  background: #f8fafc;
+  background: rgba(74, 144, 217, 0.06);
+  border: 1px solid rgba(74, 144, 217, 0.12);
   border-radius: 8px;
   margin-bottom: 0.35rem;
 }
@@ -2870,8 +2976,8 @@ onUnmounted(() => {
   position: relative;
   border-radius: 8px;
   overflow: hidden;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .media-preview-item--image {
@@ -2923,7 +3029,7 @@ onUnmounted(() => {
 
 .media-name {
   font-size: 0.75rem;
-  color: #475569;
+  color: rgba(255, 255, 255, 0.5);
   max-width: 6rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2969,10 +3075,13 @@ onUnmounted(() => {
 }
 
 .composer-bar {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border: 1px solid rgba(74, 144, 217, 0.18);
+  border-radius: 12px;
   padding: 0.4rem;
-  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 24px rgba(74, 144, 217, 0.08);
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -2986,9 +3095,9 @@ onUnmounted(() => {
 }
 
 .tool-btn {
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #475569;
+  border: 1px solid rgba(74, 144, 217, 0.15);
+  background: rgba(74, 144, 217, 0.05);
+  color: #5a6a7e;
   border-radius: 6px;
   height: 1.7rem;
   min-width: 3rem;
@@ -2998,9 +3107,9 @@ onUnmounted(() => {
 }
 
 .tool-btn:hover {
-  background: #f1f5f9;
-  border-color: #3b82f6;
-  color: #3b82f6;
+  background: rgba(74, 144, 217, 0.12);
+  border-color: rgba(74, 144, 217, 0.4);
+  color: #1F6C9F;
 }
 
 .composer-input {
@@ -3011,10 +3120,14 @@ onUnmounted(() => {
   min-height: 2.4rem;
   max-height: 6rem;
   outline: none;
-  color: #1e293b;
+  color: #2F3437;
   font: inherit;
   line-height: 1.4;
   font-size: 0.88rem;
+}
+
+.composer-input::placeholder {
+  color: #b0bccf;
 }
 
 .send-btn {
@@ -3023,7 +3136,7 @@ onUnmounted(() => {
   border-radius: 8px;
   height: 1.9rem;
   min-width: 4rem;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: linear-gradient(135deg, #4A90D9, #357ABD);
   color: #fff;
   font-weight: 500;
   font-size: 0.85rem;
@@ -3032,8 +3145,9 @@ onUnmounted(() => {
 }
 
 .send-btn:hover {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: linear-gradient(135deg, #5B9EE0, #3D86C9);
   transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(74, 144, 217, 0.3);
 }
 
 .send-btn:disabled {
@@ -3059,7 +3173,7 @@ onUnmounted(() => {
 
   .sidebar {
     border-right: none;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     max-height: 12rem;
   }
 }
@@ -3099,13 +3213,15 @@ onUnmounted(() => {
 }
 
 .risk-modal {
-  background: #ffffff;
-  border-radius: 12px;
+  background: rgba(20, 24, 40, 0.98);
+  border-radius: 16px;
   width: 90%;
   max-width: 400px;
   overflow: hidden;
   animation: slideUp 0.3s ease;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
 }
 
 @keyframes slideUp {
@@ -3317,6 +3433,40 @@ onUnmounted(() => {
 
 .guardian-notice strong {
   color: #fff;
+}
+
+/* ===== AI劝导话术样式 ===== */
+.persuasion-section {
+  margin-top: 12px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.06), rgba(99, 102, 241, 0.04));
+  border: 1px solid rgba(79, 70, 229, 0.15);
+  border-radius: 10px;
+  padding: 12px 14px;
+  animation: fadeInUp 0.4s ease-out;
+}
+
+.persuasion-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.persuasion-icon {
+  font-size: 1rem;
+}
+
+.persuasion-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4338ca;
+}
+
+.persuasion-content {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #334155;
+  white-space: pre-wrap;
 }
 
 .risk-modal-footer {

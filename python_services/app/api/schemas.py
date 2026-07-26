@@ -138,3 +138,85 @@ class HealthResponse(BaseModel):
     """健康检查响应"""
     status: str = Field(default="ok", description="服务状态")
     version: str = Field(default="1.0.0", description="服务版本")
+
+
+# ===================== AI 对话相关模型 =====================
+
+class ChatRequest(BaseModel):
+    """AI 对话请求"""
+    message: str = Field(..., description="用户消息内容")
+    conversation_id: str = Field(default="default", description="对话ID，用于保持对话历史")
+
+
+class ChatResponse(BaseModel):
+    """AI 对话响应"""
+    success: bool = Field(default=True, description="是否成功")
+    response: str = Field(default="", description="AI 回复内容")
+    conversation_id: str = Field(default="default", description="对话ID")
+
+
+class ChatStreamRequest(BaseModel):
+    """流式对话请求"""
+    message: str = Field(..., description="用户消息")
+    conversation_id: str = Field(default="default", description="对话ID")
+
+
+class VisionRequest(BaseModel):
+    """视觉分析请求"""
+    image_base64: str = Field(..., description="Base64 编码的图片数据")
+    prompt: Optional[str] = Field(default=None, description="自定义提示词（可选）")
+
+
+class VisionResponse(BaseModel):
+    """视觉分析响应"""
+    success: bool = Field(default=False, description="是否成功")
+    text: str = Field(default="", description="分析结果文本")
+    error: Optional[str] = Field(default=None, description="错误信息")
+
+
+class RAGSearchRequest(BaseModel):
+    """RAG 检索请求"""
+    query: str = Field(..., description="检索查询")
+    k: int = Field(default=5, description="返回结果数量")
+
+
+class RAGSearchResult(BaseModel):
+    """RAG 检索结果项"""
+    text: str = Field(default="", description="文档内容")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="元数据")
+    score: float = Field(default=0.0, description="相似度分数")
+
+
+class RAGSearchResponse(BaseModel):
+    """RAG 检索响应"""
+    success: bool = Field(default=True, description="是否成功")
+    results: List[RAGSearchResult] = Field(default_factory=list, description="检索结果")
+    total: int = Field(default=0, description="结果数量")
+
+
+class ChatReportRequest(BaseModel):
+    """对话报告生成请求"""
+    message: str = Field(..., description="用户消息")
+    conversation_id: str = Field(default="default", description="对话ID")
+    user_name: str = Field(default="用户", description="用户名")
+
+
+class ReportItem(BaseModel):
+    """报告项"""
+    title: str = Field(default="", description="报告标题")
+    suggestions: List[str] = Field(default_factory=list, description="建议列表")
+
+
+class ChatReportResponse(BaseModel):
+    """对话报告生成响应"""
+    success: bool = Field(default=True, description="是否成功")
+    response: str = Field(default="", description="AI 回复")
+    report: ReportItem = Field(default_factory=ReportItem, description="反诈报告")
+
+
+class LLMStatsResponse(BaseModel):
+    """LLM 统计信息响应"""
+    success: bool = Field(default=True, description="是否成功")
+    chat_agent: Dict[str, Any] = Field(default_factory=dict, description="对话代理统计")
+    rag_agent: Dict[str, Any] = Field(default_factory=dict, description="RAG 统计")
+    tools: List[str] = Field(default_factory=list, description="可用工具列表")

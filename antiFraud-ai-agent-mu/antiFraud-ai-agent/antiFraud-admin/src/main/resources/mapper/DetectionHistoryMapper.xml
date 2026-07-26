@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.antifraud.admin.mapper.DetectionHistoryMapper">
+
+    <resultMap id="DetectionHistoryResult" type="com.antifraud.admin.domain.DetectionHistory">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="inputType" column="input_type"/>
+        <result property="inputContent" column="input_content"/>
+        <result property="fraudType" column="fraud_type"/>
+        <result property="riskScore" column="risk_score"/>
+        <result property="riskLevel" column="risk_level"/>
+        <result property="confidence" column="confidence"/>
+        <result property="suggestion" column="suggestion"/>
+        <result property="aiResponse" column="ai_response"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="selectDetectionHistoryVo">
+        SELECT id, user_id, input_type, input_content, fraud_type, risk_score, risk_level, confidence, suggestion, ai_response, created_at
+        FROM detection_history
+    </sql>
+
+    <select id="selectDetectionHistoryList" parameterType="com.antifraud.admin.domain.DetectionHistory" resultMap="DetectionHistoryResult">
+        <include refid="selectDetectionHistoryVo"/>
+        <where>
+            <if test="userId != null and userId != ''">
+                AND user_id = #{userId}
+            </if>
+            <if test="fraudType != null and fraudType != ''">
+                AND fraud_type LIKE CONCAT('%', #{fraudType}, '%')
+            </if>
+            <if test="riskLevel != null and riskLevel != ''">
+                AND risk_level = #{riskLevel}
+            </if>
+            <if test="inputType != null and inputType != ''">
+                AND input_type = #{inputType}
+            </if>
+        </where>
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectDetectionHistoryById" parameterType="Long" resultMap="DetectionHistoryResult">
+        <include refid="selectDetectionHistoryVo"/>
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insertDetectionHistory" parameterType="com.antifraud.admin.domain.DetectionHistory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO detection_history (user_id, input_type, input_content, fraud_type, risk_score, risk_level, confidence, suggestion, ai_response, created_at)
+        VALUES (#{userId}, #{inputType}, #{inputContent}, #{fraudType}, #{riskScore}, #{riskLevel}, #{confidence}, #{suggestion}, #{aiResponse}, NOW())
+    </insert>
+
+    <update id="updateDetectionHistory" parameterType="com.antifraud.admin.domain.DetectionHistory">
+        UPDATE detection_history
+        <set>
+            <if test="fraudType != null">fraud_type = #{fraudType},</if>
+            <if test="riskScore != null">risk_score = #{riskScore},</if>
+            <if test="riskLevel != null">risk_level = #{riskLevel},</if>
+            <if test="confidence != null">confidence = #{confidence},</if>
+            <if test="suggestion != null">suggestion = #{suggestion},</if>
+            <if test="aiResponse != null">ai_response = #{aiResponse},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteDetectionHistoryById" parameterType="Long">
+        DELETE FROM detection_history WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteDetectionHistoryByIds" parameterType="Long">
+        DELETE FROM detection_history WHERE id IN
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

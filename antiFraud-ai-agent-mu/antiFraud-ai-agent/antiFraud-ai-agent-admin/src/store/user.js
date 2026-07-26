@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import http from '../api/index.js'
 
 export const useUserStore = defineStore('user', () => {
   const userInfo = ref({
     id: null,
-    username: 'admin',
+    username: '',
     avatar: '',
-    role: 'admin',
+    role: '',
     gridArea: '',
   })
   const token = ref(localStorage.getItem('admin_token') || '')
@@ -23,23 +24,19 @@ export const useUserStore = defineStore('user', () => {
     localStorage.setItem('admin_token', newToken)
   }
 
-  function login(credentials) {
-    // 模拟登录
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const mockToken = 'mock_token_' + Date.now()
-        setToken(mockToken)
-        setUserInfo({
-          id: 1,
-          username: credentials.username || 'admin',
-          role: 'admin',
-        })
-        resolve({
-          token: mockToken,
-          user: userInfo.value,
-        })
-      }, 300)
+  async function login(credentials) {
+    const res = await http.post('/v1/auth/login', {
+      username: credentials.username,
+      password: credentials.password,
+      code: credentials.code,
+      uuid: credentials.uuid,
     })
+    if (res.success) {
+      setToken(res.token)
+      setUserInfo(res.user)
+      return res
+    }
+    throw new Error(res.message || '登录失败')
   }
 
   function logout() {
@@ -55,12 +52,19 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('admin_token')
   }
 
-  function getUserInfo() {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(userInfo.value)
-      }, 200)
-    })
+  async function getUserInfo() {
+    if (!token.value) return null
+    try {
+      const res = await http.get('/v1/auth/userinfo', {
+        headers: { Authorization: `Bearer ${token.value}` },
+      })
+      if (res.success) {
+        setUserInfo(res.user)
+        return res.user
+      }
+    } catch {
+      return null
+    }
   }
 
   return {

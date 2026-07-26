@@ -19,7 +19,7 @@ defineProps({
     class="ai-avatar"
     :class="[`ai-avatar--${variant}`, `ai-avatar--${size}`]"
     role="img"
-    :aria-label="variant === 'fraud' ? '反诈骗大师 AI' : '超级智能体 AI'"
+    :aria-label="variant === 'fraud' ? '反诈卫士 AI' : '超级智能体 AI'"
   >
     <svg v-if="variant === 'fraud'" class="glyph" viewBox="0 0 40 40" fill="none" aria-hidden="true">
       <!-- 简单盾牌 + 勾选图标 -->

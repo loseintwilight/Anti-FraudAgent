@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.antifraud.admin.mapper.FraudReportMapper">
+
+    <resultMap id="FraudReportResult" type="com.antifraud.admin.domain.FraudReport">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="riskLevel" column="risk_level"/>
+        <result property="riskScore" column="risk_score"/>
+        <result property="fraudType" column="fraud_type"/>
+        <result property="suggestions" column="suggestions"/>
+        <result property="reportContent" column="report_content"/>
+        <result property="imageBase64" column="image_base64"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="selectFraudReportVo">
+        SELECT id, user_id, title, risk_level, risk_score, fraud_type, suggestions, report_content, image_base64, status, created_at, updated_at
+        FROM fraud_report
+    </sql>
+
+    <select id="selectFraudReportList" parameterType="com.antifraud.admin.domain.FraudReport" resultMap="FraudReportResult">
+        <include refid="selectFraudReportVo"/>
+        <where>
+            <if test="userId != null and userId != ''">
+                AND user_id = #{userId}
+            </if>
+            <if test="fraudType != null and fraudType != ''">
+                AND fraud_type LIKE CONCAT('%', #{fraudType}, '%')
+            </if>
+            <if test="riskLevel != null and riskLevel != ''">
+                AND risk_level = #{riskLevel}
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectFraudReportById" parameterType="Long" resultMap="FraudReportResult">
+        <include refid="selectFraudReportVo"/>
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insertFraudReport" parameterType="com.antifraud.admin.domain.FraudReport" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO fraud_report (user_id, title, risk_level, risk_score, fraud_type, suggestions, report_content, image_base64, status, created_at, updated_at)
+        VALUES (#{userId}, #{title}, #{riskLevel}, #{riskScore}, #{fraudType}, #{suggestions}, #{reportContent}, #{imageBase64}, #{status}, NOW(), NOW())
+    </insert>
+
+    <update id="updateFraudReport" parameterType="com.antifraud.admin.domain.FraudReport">
+        UPDATE fraud_report
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="riskLevel != null">risk_level = #{riskLevel},</if>
+            <if test="riskScore != null">risk_score = #{riskScore},</if>
+            <if test="fraudType != null">fraud_type = #{fraudType},</if>
+            <if test="suggestions != null">suggestions = #{suggestions},</if>
+            <if test="reportContent != null">report_content = #{reportContent},</if>
+            <if test="status != null">status = #{status},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteFraudReportById" parameterType="Long">
+        DELETE FROM fraud_report WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteFraudReportByIds" parameterType="Long">
+        DELETE FROM fraud_report WHERE id IN
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

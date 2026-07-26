@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.antifraud.admin.mapper.SysRoleMapper">
+
+    <resultMap id="SysRoleResult" type="com.antifraud.admin.domain.SysRole">
+        <id property="id" column="id"/>
+        <result property="roleName" column="role_name"/>
+        <result property="roleKey" column="role_key"/>
+        <result property="roleSort" column="role_sort"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="selectRoleVo">
+        SELECT id, role_name, role_key, role_sort, status, created_at, updated_at
+        FROM sys_role
+    </sql>
+
+    <select id="selectRoleById" parameterType="Long" resultMap="SysRoleResult">
+        <include refid="selectRoleVo"/>
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectRoleList" parameterType="com.antifraud.admin.domain.SysRole" resultMap="SysRoleResult">
+        <include refid="selectRoleVo"/>
+        <where>
+            <if test="roleName != null and roleName != ''">
+                AND role_name LIKE CONCAT('%', #{roleName}, '%')
+            </if>
+            <if test="roleKey != null and roleKey != ''">
+                AND role_key LIKE CONCAT('%', #{roleKey}, '%')
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY role_sort
+    </select>
+
+    <select id="selectRoleByUserId" parameterType="Long" resultMap="SysRoleResult">
+        SELECT r.id, r.role_name, r.role_key, r.role_sort, r.status
+        FROM sys_role r
+        LEFT JOIN sys_user_role ur ON r.id = ur.role_id
+        WHERE ur.user_id = #{userId}
+    </select>
+
+    <insert id="insertRole" parameterType="com.antifraud.admin.domain.SysRole" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_role (role_name, role_key, role_sort, status, created_at, updated_at)
+        VALUES (#{roleName}, #{roleKey}, #{roleSort}, #{status}, NOW(), NOW())
+    </insert>
+
+    <update id="updateRole" parameterType="com.antifraud.admin.domain.SysRole">
+        UPDATE sys_role
+        <set>
+            <if test="roleName != null">role_name = #{roleName},</if>
+            <if test="roleKey != null">role_key = #{roleKey},</if>
+            <if test="roleSort != null">role_sort = #{roleSort},</if>
+            <if test="status != null">status = #{status},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteRoleById" parameterType="Long">
+        DELETE FROM sys_role WHERE id = #{id}
+    </delete>
+
+</mapper>

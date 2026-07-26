@@ -8,14 +8,60 @@
 </head>
 <body>
   <div id="app">
+    <!-- 登录覆盖层 -->
+    <div class="login-overlay" id="loginOverlay">
+      <div class="login-card">
+        <div class="login-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 3L20 7.5V12.5C20 17.3 16.5 21.7 12 23C7.5 21.7 4 17.3 4 12.5V7.5L12 3Z" fill="#165DFF" stroke="#165DFF" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <h2 class="login-title">反诈卫士</h2>
+        <p class="login-subtitle">登录以使用检测功能</p>
+        <div class="login-form">
+          <div class="login-field">
+            <label class="login-label">用户名</label>
+            <input type="text" class="login-input" id="loginUsername" placeholder="请输入用户名" />
+          </div>
+          <div class="login-field">
+            <label class="login-label">密码</label>
+            <input type="password" class="login-input" id="loginPassword" placeholder="请输入密码" />
+          </div>
+          <div class="login-error" id="loginError" style="display:none;"></div>
+          <button class="login-btn" id="loginBtn">登 录</button>
+        </div>
+        <div class="login-footer">
+          <span class="login-footer-text">还没有账号？</span>
+          <a class="login-footer-link" href="#" id="registerLink">立即注册</a>
+        </div>
+        <!-- 注册表单（隐藏） -->
+        <div class="register-form" id="registerForm" style="display:none;">
+          <div class="login-field">
+            <label class="login-label">用户名</label>
+            <input type="text" class="login-input" id="regUsername" placeholder="请输入用户名" />
+          </div>
+          <div class="login-field">
+            <label class="login-label">密码</label>
+            <input type="password" class="login-input" id="regPassword" placeholder="请输入密码（至少6位）" />
+          </div>
+          <div class="login-field">
+            <label class="login-label">确认密码</label>
+            <input type="password" class="login-input" id="regConfirm" placeholder="请再次输入密码" />
+          </div>
+          <div class="login-error" id="regError" style="display:none;"></div>
+          <button class="login-btn" id="registerBtn">注 册</button>
+          <div class="login-footer">
+            <span class="login-footer-text">已有账号？</span>
+            <a class="login-footer-link" href="#" id="backToLoginLink">返回登录</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 头部 -->
     <header class="header">
       <div class="header-left">
-        <svg class="header-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 3L20 7.5V12.5C20 17.3 16.5 21.7 12 23C7.5 21.7 4 17.3 4 12.5V7.5L12 3Z" fill="#409EFF" stroke="#2c7be5" stroke-width="1.5"/>
-          <path d="M12 8V13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="12" cy="16" r="1" fill="white"/>
-        </svg>
+        <img src="../icons/icon.png" alt="反诈卫士" class="header-logo" />
         <h1 class="header-title">反诈卫士</h1>
       </div>
       <div class="header-right">
@@ -115,6 +161,14 @@
           <path d="M8 1V3M8 13V15M1 8H3M13 8H15M3.05 3.05L4.46 4.46M11.54 11.54L12.95 12.95M12.95 3.05L11.54 4.46M4.46 11.54L3.05 12.95" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
         设置
+      </button>
+      <button class="footer-btn" id="logoutBtn" style="color:#F56C6C;">
+        <svg class="footer-btn-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 2H3C2.44772 2 2 2.44772 2 3V13C2 13.5523 2.44772 14 3 14H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M11 11L14 8L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        退出登录
       </button>
     </footer>
   </div>

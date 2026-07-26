@@ -100,54 +100,57 @@ const statsCards = computed(() => [
   },
 ])
 
+// 深色主题图表配置
+const textColor = '#a8a3b8'
+const axisColor = 'rgba(255, 255, 255, 0.08)'
+const primaryColor = '#165DFF'
+
 const trendOption = computed(() => ({
-  title: {
-    text: '风险趋势',
-    textStyle: {
-      fontSize: 14,
-      fontWeight: 600,
-    },
-    left: 'center',
-    top: 0,
-  },
   tooltip: {
     trigger: 'axis',
+    backgroundColor: 'rgba(10, 14, 26, 0.9)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    textStyle: { color: '#f4f3f8', fontSize: 12 },
     formatter: function (params) {
       const p = params[0]
-      return `${p.axisValue}<br/>检测数: ${p.value}`
+      return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue}</div><div>检测数: <span style="color:#165DFF;font-weight:700">${p.value}</span></div>`
     },
   },
   grid: {
     left: '3%',
     right: '4%',
     bottom: '3%',
-    top: '15%',
+    top: '12%',
     containLabel: true,
   },
   xAxis: {
     type: 'category',
     data: dashboardStore.trendData.map((d) => d.date),
     boundaryGap: false,
-    axisLabel: {
-      fontSize: 12,
-    },
+    axisLine: { lineStyle: { color: axisColor } },
+    axisTick: { show: false },
+    axisLabel: { fontSize: 12, color: textColor },
   },
   yAxis: {
     type: 'value',
     splitLine: {
-      lineStyle: {
-        type: 'dashed',
-      },
+      lineStyle: { color: axisColor, type: 'dashed' },
     },
+    axisLabel: { fontSize: 12, color: textColor },
   },
   series: [
     {
       type: 'line',
       data: dashboardStore.trendData.map((d) => d.value),
       smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
       lineStyle: {
         width: 3,
-        color: '#409EFF',
+        color: primaryColor,
+        shadowColor: 'rgba(22, 93, 255, 0.3)',
+        shadowBlur: 8,
       },
       areaStyle: {
         color: {
@@ -157,36 +160,36 @@ const trendOption = computed(() => ({
           x2: 0,
           y2: 1,
           colorStops: [
-            { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
-            { offset: 1, color: 'rgba(64, 158, 255, 0.05)' },
+            { offset: 0, color: 'rgba(22, 93, 255, 0.25)' },
+            { offset: 1, color: 'rgba(22, 93, 255, 0.02)' },
           ],
         },
       },
       itemStyle: {
-        color: '#409EFF',
+        color: primaryColor,
       },
       markPoint: {
         data: [
           { type: 'max', name: '最大值' },
           { type: 'min', name: '最小值' },
         ],
+        symbol: 'pin',
+        symbolSize: 40,
+        label: { color: '#fff', fontSize: 10 },
       },
     },
   ],
 }))
 
+const pieColors = ['#165DFF', '#00C853', '#FFB300', '#FF5252', '#78909C']
+
 const pieOption = computed(() => ({
-  title: {
-    text: '诈骗类型分布',
-    textStyle: {
-      fontSize: 14,
-      fontWeight: 600,
-    },
-    left: 'center',
-    top: 0,
-  },
   tooltip: {
     trigger: 'item',
+    backgroundColor: 'rgba(10, 14, 26, 0.9)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    textStyle: { color: '#f4f3f8', fontSize: 12 },
     formatter: '{b}: {c} ({d}%)',
   },
   legend: {
@@ -195,6 +198,7 @@ const pieOption = computed(() => ({
     top: 'center',
     itemWidth: 12,
     itemHeight: 12,
+    textStyle: { color: textColor, fontSize: 12 },
   },
   series: [
     {
@@ -204,7 +208,7 @@ const pieOption = computed(() => ({
       avoidLabelOverlap: true,
       itemStyle: {
         borderRadius: 6,
-        borderColor: '#fff',
+        borderColor: 'rgba(10, 14, 26, 0.8)',
         borderWidth: 2,
       },
       label: {
@@ -215,6 +219,12 @@ const pieOption = computed(() => ({
           show: true,
           fontSize: 14,
           fontWeight: 'bold',
+          color: '#f4f3f8',
+        },
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)',
         },
       },
       labelLine: {
@@ -224,7 +234,7 @@ const pieOption = computed(() => ({
         name: item.name,
         value: item.value,
       })),
-      color: ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399'],
+      color: pieColors,
     },
   ],
 }))
@@ -261,6 +271,7 @@ onMounted(() => {
         v-for="(card, index) in statsCards"
         :key="index"
         class="stats-card"
+        :style="{ animationDelay: `${index * 0.1}s` }"
       >
         <div class="stats-icon" :class="card.color">
           <el-icon :size="28">
@@ -284,9 +295,11 @@ onMounted(() => {
     <!-- 图表区域 -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px">
       <div class="chart-container">
+        <div class="chart-title">风险趋势</div>
         <VChart :option="trendOption" autoresize class="chart-box" />
       </div>
       <div class="chart-container">
+        <div class="chart-title">诈骗类型分布</div>
         <VChart :option="pieOption" autoresize class="chart-box" />
       </div>
     </div>
@@ -334,5 +347,46 @@ onMounted(() => {
 .dashboard-page {
   max-width: 1600px;
   margin: 0 auto;
+  animation: dashboardFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dashboardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stats-card {
+  animation: cardSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes cardSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 表格内链接触摸优化 */
+:deep(.el-button--primary.is-link) {
+  padding: 4px 8px;
+}
+
+/* 图表容器标题 */
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f4f3f8;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
 }
 </style>

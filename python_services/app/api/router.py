@@ -1,26 +1,38 @@
 """
 API 路由注册
-挂载所有 API 端点，包括风险评分、报告生成、诈骗分类、劝导话术、爬虫触发、健康检查
+挂载所有 API 端点，包括风险评分、AI 对话、视觉分析、RAG、诈骗分类等
 """
 
 from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, AsyncGenerator
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 from app.api.schemas import (
+    ChatReportRequest,
+    ChatReportResponse,
+    ChatRequest,
+    ChatResponse,
     FraudClassifyRequest,
     FraudClassifyResponse,
     HealthResponse,
+    LLMStatsResponse,
     PersuasionRequest,
     PersuasionResponse,
+    RAGSearchRequest,
+    RAGSearchResponse,
+    RAGSearchResult,
+    ReportItem,
     ReportRequest,
     ReportResponse,
     RiskRequest,
     RiskResponse,
+    VisionRequest,
+    VisionResponse,
 )
 from app.nlp.fraud_classifier import FraudClassifier
 from app.nlp.persuasion import PersuasionGenerator
@@ -39,10 +51,12 @@ _scorer: RiskScorer | None = None
 _classifier: FraudClassifier | None = None
 _persuasion_gen: PersuasionGenerator | None = None
 _report_gen: ImageReportGenerator | None = None
+_chat_agent: Any = None
+_rag_agent: Any = None
+_vision_analyzer: Any = None
 
 
 def _get_profile_builder() -> UserProfile:
-    """获取或创建 UserProfile 实例"""
     global _profile_builder
     if _profile_builder is None:
         _profile_builder = UserProfile()
@@ -50,7 +64,6 @@ def _get_profile_builder() -> UserProfile:
 
 
 def _get_scorer() -> RiskScorer:
-    """获取或创建 RiskScorer 实例"""
     global _scorer
     if _scorer is None:
         _scorer = RiskScorer()
@@ -58,7 +71,6 @@ def _get_scorer() -> RiskScorer:
 
 
 def _get_classifier() -> FraudClassifier:
-    """获取或创建 FraudClassifier 实例"""
     global _classifier
     if _classifier is None:
         _classifier = FraudClassifier()
@@ -66,7 +78,6 @@ def _get_classifier() -> FraudClassifier:
 
 
 def _get_persuasion_gen() -> PersuasionGenerator:
-    """获取或创建 PersuasionGenerator 实例"""
     global _persuasion_gen
     if _persuasion_gen is None:
         _persuasion_gen = PersuasionGenerator()
@@ -74,15 +85,40 @@ def _get_persuasion_gen() -> PersuasionGenerator:
 
 
 def _get_report_gen() -> ImageReportGenerator:
-    """获取或创建 ImageReportGenerator 实例"""
     global _report_gen
     if _report_gen is None:
         _report_gen = ImageReportGenerator()
     return _report_gen
 
 
-# ===================== 健康检查 =====================
+def _get_chat_agent():
+    """获取或创建 ChatAgent 实例"""
+    global _chat_agent
+    if _chat_agent is None:
+        from app.llm.chat_agent import ChatAgent
+        _chat_agent = ChatAgent()
+    return _chat_agent
 
+
+def _get_rag_agent():
+    """获取或创建 RAGAgent 实例"""
+    global _rag_agent
+    if _rag_agent is None:
+        from app.llm.rag_agent import RAGAgent
+        _rag_agent = RAGAgent()
+    return _rag_agent
+
+
+def _get_vision_analyzer():
+    """获取或创建 VisionAnalyzer 实例"""
+    global _vision_analyzer
+    if _vision_analyzer is None:
+        from app.llm.vision import VisionAnalyzer
+        _vision_analyzer = VisionAnalyzer()
+    return _vision_analyzer
+
+
+# ===================== 健康检查 =====================
 
 @router.get("/health", response_model=HealthResponse, tags=["System"])
 async def health_check() -> HealthResponse:
@@ -91,7 +127,6 @@ async def health_check() -> HealthResponse:
 
 
 # ===================== 风险评分 =====================
-
 
 @router.post("/risk/score", response_model=RiskResponse, tags=["Risk Engine"])
 async def compute_risk_score(request: RiskRequest) -> RiskResponse:
@@ -105,10 +140,7 @@ async def compute_risk_score(request: RiskRequest) -> RiskResponse:
         profile_builder = _get_profile_builder()
         scorer = _get_scorer()
 
-        # 构建用户画像
         profile = profile_builder.build(request.behavior, request.user_id)
-
-        # 计算风险评分
         score_result = scorer.evaluate(profile)
 
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -128,14 +160,9 @@ async def compute_risk_score(request: RiskRequest) -> RiskResponse:
 
 # ===================== 诈骗分类 =====================
 
-
 @router.post("/nlp/classify", response_model=FraudClassifyResponse, tags=["NLP"])
 async def classify_fraud(request: FraudClassifyRequest) -> FraudClassifyResponse:
-    """
-    诈骗类型分类
-    - 基于关键词匹配 + 规则判断
-    - 返回诈骗类型、置信度、匹配关键词
-    """
+    """诈骗类型分类"""
     try:
         classifier = _get_classifier()
         result = classifier.classify(request.text, age=request.user_age)
@@ -147,13 +174,9 @@ async def classify_fraud(request: FraudClassifyRequest) -> FraudClassifyResponse
 
 # ===================== 劝导话术生成 =====================
 
-
 @router.post("/nlp/persuade", response_model=PersuasionResponse, tags=["NLP"])
 async def generate_persuasion(request: PersuasionRequest) -> PersuasionResponse:
-    """
-    生成劝导话术
-    - 根据诈骗类型和年龄组，生成口语化劝阻话术
-    """
+    """生成劝导话术"""
     try:
         gen = _get_persuasion_gen()
         text = gen.generate(
@@ -173,14 +196,9 @@ async def generate_persuasion(request: PersuasionRequest) -> PersuasionResponse:
 
 # ===================== 报告生成 =====================
 
-
 @router.post("/report/generate", response_model=ReportResponse, tags=["Report"])
 async def generate_report(request: ReportRequest) -> ReportResponse:
-    """
-    生成风险报告图片
-    - 使用 Pillow 生成包含风险信息的图片报告
-    - 返回 Base64 编码的图片数据
-    """
+    """生成风险报告图片"""
     try:
         gen = _get_report_gen()
         result = gen.generate(
@@ -206,13 +224,9 @@ async def generate_report(request: ReportRequest) -> ReportResponse:
 
 # ===================== 爬虫触发 =====================
 
-
 @router.post("/crawler/trigger", tags=["Crawler"])
 async def trigger_crawl(source: str = "all") -> Dict[str, Any]:
-    """
-    手动触发爬虫任务
-    - source: 爬取来源，可选 mps_gov / news / all，默认 all
-    """
+    """手动触发爬虫任务"""
     try:
         from app.crawler.engine import CrawlerEngine
 
@@ -222,3 +236,211 @@ async def trigger_crawl(source: str = "all") -> Dict[str, Any]:
     except Exception as e:
         logger.exception("爬虫触发失败")
         raise HTTPException(status_code=500, detail=f"爬虫触发失败: {str(e)}")
+
+
+# ===================== AI 对话（基于 LangChain）=====================
+
+@router.post("/ai/chat", response_model=ChatResponse, tags=["AI Chat"])
+async def ai_chat(request: ChatRequest) -> ChatResponse:
+    """
+    AI 智能对话
+    - 基于 LangChain + DashScope 实现
+    - 支持三种模式：闲聊、咨询、反诈预警
+    - 自动保持对话历史
+    """
+    try:
+        agent = _get_chat_agent()
+        response = agent.chat(
+            message=request.message,
+            conversation_id=request.conversation_id,
+        )
+        return ChatResponse(
+            success=True,
+            response=response,
+            conversation_id=request.conversation_id,
+        )
+    except Exception as e:
+        logger.exception("AI 对话失败")
+        raise HTTPException(status_code=500, detail=f"AI 对话失败: {str(e)}")
+
+
+@router.post("/ai/chat/stream", tags=["AI Chat"])
+async def ai_chat_stream(request: ChatRequest):
+    """
+    AI 流式对话（SSE）
+    - 基于 Server-Sent Events 实现流式输出
+    """
+    agent = _get_chat_agent()
+
+    async def event_generator():
+        async for chunk in agent.chat_stream(
+            message=request.message,
+            conversation_id=request.conversation_id,
+        ):
+            yield f"data: {chunk}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+    )
+
+
+@router.post("/ai/chat/tools", response_model=ChatResponse, tags=["AI Chat"])
+async def ai_chat_with_tools(request: ChatRequest) -> ChatResponse:
+    """
+    带工具调用的 AI 对话
+    - 支持文件操作、PDF 生成、网页搜索、网页抓取等工具
+    """
+    try:
+        agent = _get_chat_agent()
+        response = agent.chat_with_tools(
+            message=request.message,
+            conversation_id=request.conversation_id,
+        )
+        return ChatResponse(
+            success=True,
+            response=response,
+            conversation_id=request.conversation_id,
+        )
+    except Exception as e:
+        logger.exception("AI 工具对话失败")
+        raise HTTPException(status_code=500, detail=f"AI 工具对话失败: {str(e)}")
+
+
+@router.post("/ai/chat/report", response_model=ChatReportResponse, tags=["AI Chat"])
+async def ai_chat_with_report(request: ChatReportRequest) -> ChatReportResponse:
+    """
+    对话并生成反诈报告
+    - 返回 AI 回复和结构化的反诈报告
+    """
+    try:
+        agent = _get_chat_agent()
+        result = agent.chat_with_report(
+            message=request.message,
+            conversation_id=request.conversation_id,
+            user_name=request.user_name,
+        )
+        return ChatReportResponse(
+            success=True,
+            response=result["response"],
+            report=ReportItem(
+                title=result["report"]["title"],
+                suggestions=result["report"]["suggestions"],
+            ),
+        )
+    except Exception as e:
+        logger.exception("对话报告生成失败")
+        raise HTTPException(status_code=500, detail=f"对话报告生成失败: {str(e)}")
+
+
+@router.post("/ai/clear", tags=["AI Chat"])
+async def ai_clear_memory(conversation_id: str = "default") -> Dict[str, Any]:
+    """清除指定对话的历史记录"""
+    try:
+        agent = _get_chat_agent()
+        agent.clear_memory(conversation_id)
+        return {"success": True, "message": f"对话 {conversation_id} 历史已清除"}
+    except Exception as e:
+        logger.exception("清除对话历史失败")
+        raise HTTPException(status_code=500, detail=f"清除对话历史失败: {str(e)}")
+
+
+# ===================== 视觉分析（基于 LangChain）=====================
+
+@router.post("/ai/vision/analyze", response_model=VisionResponse, tags=["AI Vision"])
+async def analyze_image(request: VisionRequest) -> VisionResponse:
+    """
+    图片分析
+    - 使用 qwen-vl-max 多模态模型分析图片
+    - 支持 OCR 文字识别、场景描述、诈骗类型判断
+    """
+    try:
+        analyzer = _get_vision_analyzer()
+        result = analyzer.analyze_image(
+            image_base64=request.image_base64,
+            prompt=request.prompt,
+        )
+        return VisionResponse(**result)
+    except Exception as e:
+        logger.exception("图片分析失败")
+        raise HTTPException(status_code=500, detail=f"图片分析失败: {str(e)}")
+
+
+# ===================== RAG 检索（基于 LangChain）=====================
+
+@router.post("/ai/rag/search", response_model=RAGSearchResponse, tags=["AI RAG"])
+async def rag_search(request: RAGSearchRequest) -> RAGSearchResponse:
+    """
+    RAG 知识检索
+    - 基于 LangChain + ChromaDB 向量检索
+    - 返回与查询最相关的文档
+    """
+    try:
+        agent = _get_rag_agent()
+        results = agent.search(query=request.query, k=request.k)
+        return RAGSearchResponse(
+            success=True,
+            results=[RAGSearchResult(**r) for r in results],
+            total=len(results),
+        )
+    except Exception as e:
+        logger.exception("RAG 检索失败")
+        raise HTTPException(status_code=500, detail=f"RAG 检索失败: {str(e)}")
+
+
+@router.post("/ai/rag/chat", response_model=ChatResponse, tags=["AI RAG"])
+async def rag_chat(request: ChatRequest) -> ChatResponse:
+    """
+    基于 RAG 的智能对话
+    - 结合知识检索和 LLM 生成回答
+    - 适用于需要查阅反诈知识库的场景
+    """
+    try:
+        agent = _get_rag_agent()
+        response = agent.chat_with_rag(
+            message=request.message,
+            conversation_id=request.conversation_id,
+        )
+        return ChatResponse(
+            success=True,
+            response=response,
+            conversation_id=request.conversation_id,
+        )
+    except Exception as e:
+        logger.exception("RAG 对话失败")
+        raise HTTPException(status_code=500, detail=f"RAG 对话失败: {str(e)}")
+
+
+@router.get("/ai/rag/stats", tags=["AI RAG"])
+async def rag_stats() -> Dict[str, Any]:
+    """获取 RAG 向量存储统计信息"""
+    try:
+        agent = _get_rag_agent()
+        return {"success": True, "data": agent.get_stats()}
+    except Exception as e:
+        logger.exception("获取 RAG 统计失败")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===================== LLM 统计 =====================
+
+@router.get("/ai/stats", response_model=LLMStatsResponse, tags=["AI System"])
+async def llm_stats() -> LLMStatsResponse:
+    """获取 LLM 模块统计信息"""
+    try:
+        from app.llm.tools import get_all_tools
+
+        chat_agent = _get_chat_agent()
+        rag_agent = _get_rag_agent()
+        tools = [t.name for t in get_all_tools()]
+
+        return LLMStatsResponse(
+            success=True,
+            chat_agent=chat_agent.get_stats(),
+            rag_agent=rag_agent.get_stats(),
+            tools=tools,
+        )
+    except Exception as e:
+        logger.exception("获取 LLM 统计失败")
+        raise HTTPException(status_code=500, detail=str(e))

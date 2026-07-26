@@ -3,5 +3,5 @@ import ChatRoom from '../components/ChatRoom.vue'
 </script>
 
 <template>
-  <ChatRoom title="AI 反诈骗大师" />
+  <ChatRoom title="反诈卫士" />
 </template>

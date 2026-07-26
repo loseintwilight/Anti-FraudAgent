@@ -1,21 +1,6 @@
 spring:
   application:
     name: antiFraud-ai-agent
-  autoconfigure:
-    exclude:
-      - org.springframework.ai.autoconfigure.mcp.client.McpAutoConfiguration
-      - org.springframework.ai.autoconfigure.mcp.client.common.McpClientCommonAutoConfiguration
-      - org.springframework.ai.autoconfigure.mcp.client.httpclient.McpClientHttpClientAutoConfiguration
-      - org.springframework.ai.autoconfigure.mcp.client.sse.McpClientSseAutoConfiguration
-      - org.springframework.ai.autoconfigure.mcp.client.tool.McpToolCallbackAutoConfiguration
-      - org.springframework.ai.autoconfigure.mcp.client.McpToolCallbackAutoConfiguration
-  ai:
-    model:
-      chat: dashscope
-      embedding: dashscope
-    mcp:
-      client:
-        enabled: false
   servlet:
     multipart:
       enabled: true
@@ -23,22 +8,41 @@ spring:
       max-request-size: 100MB
       file-size-threshold: 10MB
 
-  # JPA 数据源配置（开发环境使用 H2 内存数据库）
+  # MySQL 数据源（用户认证 + 业务数据存储）
   datasource:
-    url: jdbc:h2:mem:antifraud
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  h2:
-    console:
-      enabled: true
+    url: jdbc:mysql://localhost:3306/anti_fraud?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: ***REMOVED***
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  # Redis 配置
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
+    timeout: 5000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: -1ms
+        max-idle: 8
+        min-idle: 0
 
   profiles:
-    active: local
+    active: mysql
+
+# JWT 配置
+jwt:
+  secret: ***REMOVED***
+  expiration: 86400000  # 24小时（毫秒）
 
 # Python 微服务配置
 python:
@@ -49,7 +53,7 @@ server:
   port: 8123
   servlet:
     context-path: /api
-# springdoc-openapi????
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -61,7 +65,7 @@ springdoc:
     - group: 'default'
       paths-to-match: '/**'
       packages-to-scan: com.antifraudqi.antifraudaiagent.controller
-# knife4j???????????????
+
 knife4j:
   enable: true
   setting:

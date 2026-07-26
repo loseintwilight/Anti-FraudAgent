@@ -33,105 +33,110 @@ function handleLogout() {
 </script>
 
 <template>
-  <div class="admin-layout">
-    <!-- 侧边栏 -->
-    <aside class="admin-sidebar" :class="{ collapsed: isCollapsed }">
-      <div class="sidebar-logo">
-        <el-icon class="logo-icon" :size="24">
-          <Shield />
-        </el-icon>
-        <span class="logo-text" :class="{ hidden: isCollapsed }">反诈卫士</span>
-      </div>
-      <div class="sidebar-menu">
-        <el-menu
-          :default-active="route.path"
-          :collapse="isCollapsed"
-          :collapse-transition="false"
-          background-color="#304156"
-          text-color="#bfcbd9"
-          active-text-color="#409EFF"
-          @select="handleMenuSelect"
-        >
-          <el-menu-item
-            v-for="item in menuItems"
-            :key="item.path"
-            :index="item.path"
+  <template v-if="!route.meta?.noLayout">
+    <div class="admin-layout">
+      <!-- 侧边栏 -->
+      <aside class="admin-sidebar" :class="{ collapsed: isCollapsed }">
+        <div class="sidebar-logo">
+          <el-icon class="logo-icon" :size="24">
+            <Shield />
+          </el-icon>
+          <span class="logo-text" :class="{ hidden: isCollapsed }">反诈卫士</span>
+        </div>
+        <div class="sidebar-menu">
+          <el-menu
+            :default-active="route.path"
+            :collapse="isCollapsed"
+            :collapse-transition="false"
+            background-color="transparent"
+            text-color="#a8a3b8"
+            active-text-color="#165DFF"
+            @select="handleMenuSelect"
           >
-            <el-icon>
-              <component :is="item.icon" />
-            </el-icon>
-            <template #title>
-              <span>{{ item.name }}</span>
-            </template>
-          </el-menu-item>
-        </el-menu>
-      </div>
-      <div class="sidebar-toggle" @click="toggleSidebar">
-        <el-icon :size="18">
-          <Fold v-if="!isCollapsed" />
-          <Expand v-else />
-        </el-icon>
-      </div>
-    </aside>
-
-    <!-- 主内容区 -->
-    <div class="admin-main" :class="{ expanded: isCollapsed }">
-      <!-- 顶部导航栏 -->
-      <header class="admin-header">
-        <div class="header-left">
-          <el-breadcrumb separator="/">
-            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-            <el-breadcrumb-item v-if="route.meta?.title">
-              {{ route.meta.title }}
-            </el-breadcrumb-item>
-          </el-breadcrumb>
-        </div>
-        <div class="header-right">
-          <el-tooltip content="消息通知" placement="bottom">
-            <el-badge :value="3" :hidden="false" class="header-badge">
-              <el-icon :size="20">
-                <Bell />
-              </el-icon>
-            </el-badge>
-          </el-tooltip>
-          <el-dropdown trigger="click">
-            <div class="header-user">
-              <el-avatar
-                :size="32"
-                icon="UserFilled"
-                style="background: #409EFF"
-              />
-              <span class="username">{{ userStore.userInfo.username || '管理员' }}</span>
+            <el-menu-item
+              v-for="item in menuItems"
+              :key="item.path"
+              :index="item.path"
+            >
               <el-icon>
-                <ArrowDown />
+                <component :is="item.icon" />
               </el-icon>
-            </div>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item>
-                  <el-icon><User /></el-icon>
-                  个人中心
-                </el-dropdown-item>
-                <el-dropdown-item>
-                  <el-icon><Setting /></el-icon>
-                  系统设置
-                </el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">
-                  <el-icon><SwitchButton /></el-icon>
-                  退出登录
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+              <template #title>
+                <span>{{ item.name }}</span>
+              </template>
+            </el-menu-item>
+          </el-menu>
         </div>
-      </header>
+        <div class="sidebar-toggle" @click="toggleSidebar">
+          <el-icon :size="18">
+            <Fold v-if="!isCollapsed" />
+            <Expand v-else />
+          </el-icon>
+        </div>
+      </aside>
 
-      <!-- 主内容 -->
-      <main class="admin-content">
-        <router-view />
-      </main>
+      <!-- 主内容区 -->
+      <div class="admin-main" :class="{ expanded: isCollapsed }">
+        <!-- 顶部导航栏 -->
+        <header class="admin-header">
+          <div class="header-left">
+            <el-breadcrumb separator="/">
+              <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+              <el-breadcrumb-item v-if="route.meta?.title">
+                {{ route.meta.title }}
+              </el-breadcrumb-item>
+            </el-breadcrumb>
+          </div>
+          <div class="header-right">
+            <el-tooltip content="消息通知" placement="bottom">
+              <el-badge :value="3" :hidden="false" class="header-badge">
+                <el-icon :size="20">
+                  <Bell />
+                </el-icon>
+              </el-badge>
+            </el-tooltip>
+            <el-dropdown trigger="click">
+              <div class="header-user">
+                <el-avatar
+                  :size="32"
+                  icon="UserFilled"
+                  style="background: #409EFF"
+                />
+                <span class="username">{{ userStore.userInfo.username || '管理员' }}</span>
+                <el-icon>
+                  <ArrowDown />
+                </el-icon>
+              </div>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item>
+                    <el-icon><User /></el-icon>
+                    个人中心
+                  </el-dropdown-item>
+                  <el-dropdown-item>
+                    <el-icon><Setting /></el-icon>
+                    系统设置
+                  </el-dropdown-item>
+                  <el-dropdown-item divided @click="handleLogout">
+                    <el-icon><SwitchButton /></el-icon>
+                    退出登录
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
+        </header>
+
+        <!-- 主内容 -->
+        <main class="admin-content">
+          <router-view />
+        </main>
+      </div>
     </div>
-  </div>
+  </template>
+  <template v-else>
+    <router-view />
+  </template>
 </template>
 
 <style scoped>
@@ -147,12 +152,15 @@ function handleLogout() {
 
 .el-menu {
   border-right: none;
+  background: transparent !important;
 }
 
 .el-menu-item {
   display: flex;
   align-items: center;
-  height: 50px;
-  line-height: 50px;
+  height: 44px;
+  line-height: 44px;
+  margin: 2px 8px;
+  border-radius: 10px;
 }
 </style>

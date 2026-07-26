@@ -1,10 +1,11 @@
 package com.antifraudqi.antifraudaiagent.controller;
 
-import com.antifraudqi.antifraudaiagent.app.LoveApp;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
@@ -13,13 +14,20 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * 视频分析控制器
+ * 调用 Python LangChain 微服务进行视觉分析
+ */
 @RestController
 @RequestMapping("/ai")
 @Slf4j
 public class VideoAnalysisController {
 
+    @Value("${python.service.url}")
+    private String pythonServiceUrl;
+
     @Resource
-    private LoveApp loveApp;
+    private RestTemplate restTemplate;
 
     @PostMapping(value = "/check-video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Map<String, Object> checkVideo(@RequestParam("file") MultipartFile file) {
@@ -43,10 +51,17 @@ public class VideoAnalysisController {
         String mode = detectMode(fileName);
 
         try {
-            String messageToAi = buildMessageForKnowledgeBase(fileName, mode);
-            
-            aiResponse = loveApp.doChatWithRag(messageToAi, UUID.randomUUID().toString());
-            log.info("知识库回答生成完成，模式: {}", mode);
+            // 调用 Python 微服务 AI 对话接口
+            String url = pythonServiceUrl + "/api/v1/ai/chat";
+            Map<String, Object> body = new HashMap<>();
+            body.put("message", "请分析这个视频文件的风险: " + fileName);
+            body.put("conversation_id", UUID.randomUUID().toString());
+
+            Map<String, Object> pythonResponse = restTemplate.postForObject(url, body, Map.class);
+            if (pythonResponse != null && pythonResponse.containsKey("response")) {
+                aiResponse = (String) pythonResponse.get("response");
+            }
+            log.info("AI 分析完成，模式: {}", mode);
 
             if ("anti_fraud".equals(mode)) {
                 String[] riskInfo = analyzeRiskLevel(aiResponse, fileName);
@@ -246,49 +261,6 @@ public class VideoAnalysisController {
         } else {
             return "疑似诈骗";
         }
-    }
-
-    private String buildMessageForKnowledgeBase(String fileName, String mode) {
-        StringBuilder sb = new StringBuilder();
-        
-        if ("chat".equals(mode)) {
-            sb.append("【重要】这是闲聊模式！用户上传了一个图片/视频文件。\n");
-            sb.append("文件名: ").append(fileName).append("\n\n");
-            sb.append("【闲聊模式回答要求——必须严格遵守】\n");
-            sb.append("1. 语气温暖、有画面感，用轻松自然的口语化表达，比如\"你好呀~\"\"呢~\"这类语气词\n");
-            sb.append("2. 可以分享个人感受、描述具体场景，像朋友聊天一样互动\n");
-            sb.append("3. 可以主动反问用户，拉近距离\n");
-            sb.append("4. 不要提及任何诈骗、风险、防范相关内容\n");
-            sb.append("5. 不要弹出任何风险警告或安全提示\n");
-            sb.append("重要：这是闲聊模式，不要使用四段式格式，不要提及诈骗相关内容！");
-        } else if ("consultation".equals(mode)) {
-            sb.append("【重要】这是咨询模式！用户上传了一个图片/视频文件，询问知识性问题。\n");
-            sb.append("文件名: ").append(fileName).append("\n\n");
-            sb.append("【咨询模式回答要求——必须严格遵守】\n");
-            sb.append("1. 直接输出知识库原文答案，只输出一句话定义，不要扩展、不要额外补充任何内容\n");
-            sb.append("2. 回答中绝对不能出现任何风险提醒、防范建议、避坑要点、行动建议等附加内容\n");
-            sb.append("3. 回答中绝对不能出现「⚠️ 风险提醒」「💡 防范建议」等标签或类似内容\n");
-            sb.append("4. 不弹风险警告、不生成安全检测报告、不触发反诈弹窗\n");
-            sb.append("5. 只输出知识库的答案本身，不要添加任何前置说明语或过渡文字\n");
-            sb.append("重要：这是咨询模式，不要使用四段式格式，不要添加风险提醒！");
-        } else {
-            sb.append("【重要】这是反诈预警模式！用户上传了一个图片/视频文件，需要分析其中可能存在的诈骗风险。\n");
-            sb.append("文件名: ").append(fileName).append("\n\n");
-            sb.append("请根据反诈知识库，针对该图片/视频可能存在的风险给出详细的防范建议。\n\n");
-            sb.append("【反诈预警模式回答要求——必须严格遵守】\n");
-            sb.append("1. 使用四段式自然风格回答，整体语气要像一个有经验的反诈顾问，温暖、有说服力，而不是冷冰冰的模板回复\n");
-            sb.append("2. 四段式结构：\n");
-            sb.append("   第一段：共情安抚——先理解用户的担心、紧张或困惑，用温暖的语气让用户冷静下来\n");
-            sb.append("   第二段：场景解释——解释这是什么类型的诈骗，骗子是怎么操作的，为什么会有这种套路\n");
-            sb.append("   第三段：要点提醒——用\"第一、第二、第三\"或\"记住以下几点\"的形式，给出具体的防范要点\n");
-            sb.append("   第四段：行动建议——告诉用户现在应该怎么做，给出明确的下一步行动指引\n");
-            sb.append("3. 【重要】不要使用【】这种标签式的模块标题，避免回答显得死板、模式化，但要有清晰的逻辑层次\n");
-            sb.append("4. 回答中严禁出现「高风险」「中风险」「低风险」等风险等级文字\n");
-            sb.append("5. 根据知识库中的诈骗类型和防范建议来回答\n");
-            sb.append("重要：这是反诈预警模式，必须使用四段式自然风格回答！");
-        }
-        
-        return sb.toString();
     }
 
     private String cleanResponse(String response) {

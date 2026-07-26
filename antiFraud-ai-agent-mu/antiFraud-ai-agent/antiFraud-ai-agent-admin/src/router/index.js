@@ -2,6 +2,18 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/LoginPage.vue'),
+    meta: { title: '登录', noLayout: true },
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/RegisterPage.vue'),
+    meta: { title: '注册', noLayout: true },
+  },
+  {
     path: '/',
     name: 'Dashboard',
     component: () => import('../views/Dashboard.vue'),

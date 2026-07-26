@@ -124,10 +124,38 @@ export async function clearHistory() {
   });
 }
 
+export async function login(username, password) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || '登录失败')
+  }
+  return response.json()
+}
+
+export async function register(username, password) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || '注册失败')
+  }
+  return response.json()
+}
+
 export default {
   assessRisk,
   batchAssessRisk,
   getHistory,
   saveHistory,
-  clearHistory
+  clearHistory,
+  login,
+  register
 };
