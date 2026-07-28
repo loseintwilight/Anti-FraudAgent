@@ -7,7 +7,7 @@ import logging
 import sys
 from pathlib import Path
 
-from ..config import settings
+from ..config import settings, BASE_DIR
 
 
 def setup_logger(name: str = "anti_fraud") -> logging.Logger:
@@ -35,7 +35,7 @@ def setup_logger(name: str = "anti_fraud") -> logging.Logger:
     logger.addHandler(console_handler)
 
     # 文件 handler
-    log_dir = Path(settings.BASE_DIR) / "logs"
+    log_dir = BASE_DIR / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     file_handler = logging.FileHandler(
         log_dir / "anti_fraud_service.log",

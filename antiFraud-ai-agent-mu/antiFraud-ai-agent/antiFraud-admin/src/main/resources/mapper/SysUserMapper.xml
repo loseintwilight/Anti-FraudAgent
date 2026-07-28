@@ -23,6 +23,8 @@
         <result property="role" column="role"/>
         <result property="status" column="status"/>
         <result property="avatar" column="avatar"/>
+        <result property="nickname" column="nickname"/>
+        <result property="fraudRole" column="fraud_role"/>
         <result property="lastLoginTime" column="last_login_time"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
@@ -34,6 +36,8 @@
             u.user_name AS username,
             u.password,
             u.phonenumber AS phone,
+            u.nick_name AS nickname,
+            u.fraud_role,
             COALESCE(
                 (SELECT r.role_key
                  FROM sys_user_role ur
@@ -91,7 +95,19 @@
             <if test="username != null">user_name = #{username},</if>
             <if test="password != null">password = #{password},</if>
             <if test="phone != null">phonenumber = #{phone},</if>
+            <if test="nickname != null">nick_name = #{nickname},</if>
+            <if test="fraudRole != null">fraud_role = #{fraudRole},</if>
             <if test="status != null">status = CASE WHEN #{status} = 1 THEN '0' ELSE '1' END,</if>
+            update_time = NOW()
+        </set>
+        WHERE user_id = #{id}
+    </update>
+
+    <update id="updateUserProfile" parameterType="com.antifraud.admin.domain.SysUser">
+        UPDATE sys_user
+        <set>
+            <if test="nickname != null">nick_name = #{nickname},</if>
+            <if test="fraudRole != null">fraud_role = #{fraudRole},</if>
             update_time = NOW()
         </set>
         WHERE user_id = #{id}

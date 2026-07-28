@@ -10,6 +10,10 @@ export default defineConfig({
         target: 'http://localhost:8123',
         changeOrigin: true,
       },
+      '/admin-api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
 })

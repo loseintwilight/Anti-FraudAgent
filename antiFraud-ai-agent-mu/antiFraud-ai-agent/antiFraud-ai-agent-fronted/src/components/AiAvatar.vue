@@ -1,5 +1,7 @@
 <script setup>
-defineProps({
+import { ref, onMounted } from 'vue'
+
+const props = defineProps({
   /** fraud | manus */
   variant: {
     type: String,
@@ -12,6 +14,16 @@ defineProps({
     validator: (v) => ['sm', 'md', 'lg'].includes(v),
   },
 })
+
+const imgLoaded = ref(false)
+const imgError = ref(false)
+
+onMounted(() => {
+  const img = new Image()
+  img.onload = () => { imgLoaded.value = true }
+  img.onerror = () => { imgError.value = true }
+  img.src = '/src/assets/ai-avatar.jpg'
+})
 </script>
 
 <template>
@@ -21,21 +33,32 @@ defineProps({
     role="img"
     :aria-label="variant === 'fraud' ? '反诈卫士 AI' : '超级智能体 AI'"
   >
-    <svg v-if="variant === 'fraud'" class="glyph" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-      <!-- 简单盾牌 + 勾选图标 -->
-      <path
-        d="M20 5.7c-4.2 3.1-8.5 3.6-11.2 3.7v10.6c0 7.2 5.3 11.6 11.2 14.3 5.9-2.7 11.2-7.1 11.2-14.3V9.4c-2.7-.1-7-.6-11.2-3.7Z"
-        stroke="currentColor"
-        stroke-width="2.2"
+    <!-- 反诈卫士：使用真实头像图片 -->
+    <template v-if="variant === 'fraud'">
+      <img
+        v-if="!imgError"
+        src="/src/assets/ai-avatar.jpg"
+        alt="反诈卫士"
+        class="avatar-img"
+        :class="{ 'avatar-img--loaded': imgLoaded }"
       />
-      <path
-        d="M14.2 20.2l3 3 8.6-9"
-        stroke="currentColor"
-        stroke-width="2.2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
+      <!-- 加载失败时显示默认SVG -->
+      <svg v-else class="glyph" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <path
+          d="M20 5.7c-4.2 3.1-8.5 3.6-11.2 3.7v10.6c0 7.2 5.3 11.6 11.2 14.3 5.9-2.7 11.2-7.1 11.2-14.3V9.4c-2.7-.1-7-.6-11.2-3.7Z"
+          stroke="currentColor"
+          stroke-width="2.2"
+        />
+        <path
+          d="M14.2 20.2l3 3 8.6-9"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </template>
+    <!-- 超级智能体：保持原样 -->
     <svg v-else class="glyph" viewBox="0 0 40 40" fill="none" aria-hidden="true">
       <rect x="9" y="12" width="22" height="18" rx="4" stroke="currentColor" stroke-width="2.2" fill="none" />
       <circle cx="16" cy="21" r="2.2" fill="currentColor" />
@@ -52,8 +75,7 @@ defineProps({
   border-radius: 50%;
   display: grid;
   place-items: center;
-  box-shadow: var(--shadow-avatar, 0 2px 10px rgba(0, 0, 0, 0.12));
-  border: 2px solid var(--avatar-ring);
+  overflow: hidden;
 }
 
 .ai-avatar--sm {
@@ -69,23 +91,26 @@ defineProps({
   height: 3rem;
 }
 
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.avatar-img--loaded {
+  opacity: 1;
+}
+
 .glyph {
   width: 55%;
   height: 55%;
 }
 
 .ai-avatar--fraud {
-  --avatar-ring: rgba(249, 115, 22, 0.35);
-  background: linear-gradient(145deg, #ffedd5 0%, #fed7aa 40%, #fef3c7 100%);
+  background: transparent;
   color: #c2410c;
-}
-
-@media (prefers-color-scheme: dark) {
-  .ai-avatar--fraud {
-    --avatar-ring: rgba(249, 115, 22, 0.4);
-    background: linear-gradient(145deg, #3b1a0f 0%, #7c2d12 55%, #4c1d95 100%);
-    color: #fb923c;
-  }
 }
 
 .ai-avatar--manus {

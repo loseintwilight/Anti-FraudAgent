@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import AiAvatar from './AiAvatar.vue'
 import UserAvatar from './UserAvatar.vue'
 import { buildApiUrl, consumeEventStream } from '../api/sse.js'
+import { setOnApiError } from '../api/http.js'
 
 const props = defineProps({
   title: { type: String, default: '反诈卫士' },
@@ -42,24 +43,182 @@ const guardianPhone = '138****5678'
 const showDeleteModal = ref(false)
 const deleteTargetSessionId = ref(null)
 
-// 角色切换提示状态
-const showRoleSwitchTip = ref(false)
-const roleSwitchTipText = ref('')
+// API 错误提示状态
+const showApiError = ref(false)
+const apiErrorMessage = ref('')
+
+// 显示 API 错误提示
+function showApiErrorMsg(message) {
+  apiErrorMessage.value = message
+  showApiError.value = true
+  // 5秒后自动关闭
+  setTimeout(() => {
+    showApiError.value = false
+  }, 8000)
+}
+
+// 用户信息状态
+const showUserProfile = ref(false)
+const userInfo = ref({
+  userId: null,
+  nickname: '用户',
+  role: 'youth',
+  roleLabel: '青年',
+  roleIcon: '',
+  loginTime: new Date().toLocaleString('zh-CN'),
+})
+
+// 视频海报缓存（URL -> 第一帧图片dataURL）
+const videoPosterCache = ref({})
+const videoLoadingMap = ref({})  // 跟踪视频是否正在加载
+
+// 获取视频第一帧作为海报
+function getVideoPoster(url) {
+  if (videoPosterCache.value[url]) {
+    return videoPosterCache.value[url]
+  }
+  // 异步生成海报
+  if (!videoLoadingMap.value[url]) {
+    videoLoadingMap.value[url] = true
+    generateVideoPoster(url).then(posterUrl => {
+      if (posterUrl) {
+        videoPosterCache.value = {
+          ...videoPosterCache.value,
+          [url]: posterUrl
+        }
+      }
+    }).catch(() => {
+      // 静默失败
+    }).finally(() => {
+      videoLoadingMap.value[url] = false
+    })
+  }
+  return ''  // 海报生成前返回空
+}
+
+// 角色标签映射
+const roleLabelMap = {
+  accountant: '财会人员',
+  worker: '自由职业者',
+  elderly: '老人',
+  youth: '青年',
+  child: '少儿',
+}
+
+// 从 localStorage 加载用户信息
+function loadUserInfo() {
+  try {
+    const saved = localStorage.getItem('antiFraud-user-info')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      userInfo.value = { ...userInfo.value, ...parsed }
+    }
+  } catch (e) {
+    console.warn('加载用户信息失败:', e)
+  }
+}
+loadUserInfo()
+
+// 从后端获取用户信息
+async function fetchUserProfile() {
+  const token = localStorage.getItem('auth_token')
+  if (!token) return
+  
+  try {
+    const res = await fetch('/admin-api/api/v1/user/profile', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    const data = await res.json()
+    if (data.code === 200 && data.data) {
+      const profile = data.data
+      userInfo.value.userId = profile.id
+      userInfo.value.nickname = profile.nickname || '用户'
+      userInfo.value.role = profile.fraudRole || 'youth'
+      userInfo.value.roleLabel = roleLabelMap[profile.fraudRole] || '青年'
+      userInfo.value.roleIcon = ''
+      saveUserInfo()
+    }
+  } catch (e) {
+    console.warn('从后端获取用户信息失败，使用本地数据:', e)
+  }
+}
+
+// 保存用户信息到后端
+async function saveUserProfile() {
+  const token = localStorage.getItem('auth_token')
+  if (!token || !userInfo.value.userId) return
+  
+  try {
+    const res = await fetch('/admin-api/api/v1/user/profile', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        nickname: userInfo.value.nickname,
+        fraudRole: userInfo.value.role,
+      })
+    })
+    const data = await res.json()
+    if (data.code === 200) {
+      console.log('用户信息已保存到后端')
+    } else {
+      console.warn('保存用户信息到后端失败:', data.msg)
+    }
+  } catch (e) {
+    console.warn('保存用户信息到后端失败:', e)
+  }
+}
+
+function saveUserInfo() {
+  try {
+    localStorage.setItem('antiFraud-user-info', JSON.stringify({
+      ...userInfo.value,
+      roleLabel: roleLabelMap[userInfo.value.role] || '青年',
+      roleIcon: '',
+    }))
+  } catch (e) {
+    console.warn('保存用户信息失败:', e)
+  }
+}
+
+// 用户角色选项（用于个人信息编辑）
+const profileRoleOptions = [
+  { value: 'accountant', label: '财会人员', desc: '财务、会计、出纳等财会从业者' },
+  { value: 'worker', label: '自由职业者', desc: '设计师、写手、自媒体、兼职等' },
+  { value: 'elderly', label: '老人', desc: '退休人员、老年群体' },
+  { value: 'youth', label: '青年', desc: '学生、上班族、中青年群体' },
+  { value: 'child', label: '少儿', desc: '未成年人、学生群体' },
+]
+
+// 更新用户角色
+function updateUserRole(role) {
+  userInfo.value.role = role
+  userInfo.value.roleLabel = roleLabelMap[role] || '青年'
+  userInfo.value.roleIcon = ''
+  saveUserInfo()
+  saveUserProfile()
+}
+
+// 打开用户资料编辑弹窗
+function openUserProfile() {
+  showUserProfile.value = true
+}
+
+// 关闭用户资料编辑弹窗
+function closeUserProfile() {
+  showUserProfile.value = false
+}
 
 // ==================== 场景化角色系统 ====================
 // 场景类型：chat(闲聊), knowledge(科普), risk_detect(风险检测)
 const currentScene = ref('chat')
 
-// 用户角色选择（多角色个性化风险评估）
-// 五大角色：财会人员、自由职业者、老人、青年、少儿
-const userRole = ref('youth') // accountant: 财会人员, worker: 自由职业者, elderly: 老人, youth: 青年, child: 少儿
-const roleOptions = [
-  { value: 'accountant', label: '财会人员', icon: '', sceneRole: '铁面审计官（资深注册会计师）' },
-  { value: 'worker', label: '自由职业者', icon: '', sceneRole: '搞钱搭子（资深自由职业者）' },
-  { value: 'elderly', label: '老人', icon: '', sceneRole: '银发守护者（老邻居/忘年交）' },
-  { value: 'youth', label: '青年', icon: '', sceneRole: '反诈战友（死党/知心大哥）' },
-  { value: 'child', label: '少儿', icon: '', sceneRole: '安全守护精灵（卡通小卫士）' },
-]
+// 用户角色（默认青年，由智能识别自动切换）
+const userRole = ref('youth')
 
 // 场景识别关键词（意图判断）
 const sceneKeywords = {
@@ -82,35 +241,7 @@ const ROLE_STORAGE_KEY = 'antiFraud-ai-fraud-user-role-v1'
 const RISK_MEMORY_KEY = 'antiFraud-ai-fraud-risk-memory-v1'
 const SHORT_MEMORY_KEY = 'antiFraud-ai-fraud-short-memory-v1'
 
-// 角色下拉框控制
-const showRoleDropdown = ref(false)
 
-// 当前选中角色选项（计算属性）
-const currentRoleOption = computed(() => {
-  return roleOptions.find(opt => opt.value === userRole.value) || roleOptions[0]
-})
-
-// 切换下拉框显示状态
-function toggleRoleDropdown() {
-  showRoleDropdown.value = !showRoleDropdown.value
-}
-
-// 选择角色
-function selectRole(value) {
-  const prevRole = userRole.value
-  userRole.value = value
-  showRoleDropdown.value = false
-  
-  // 显示角色切换提示
-  const roleInfo = roleOptions.find(opt => opt.value === value)
-  if (roleInfo && prevRole !== value) {
-    roleSwitchTipText.value = `角色切换成功！当前角色：${roleInfo.icon} ${roleInfo.label}`
-    showRoleSwitchTip.value = true
-    setTimeout(() => {
-      showRoleSwitchTip.value = false
-    }, 2500)
-  }
-}
 
 // ==================== 删除确认弹窗 ====================
 function confirmDeleteSession() {
@@ -996,6 +1127,64 @@ function pinSession(sessionId) {
   activeMenuId.value = null
 }
 
+// 打开视频播放器（点击视频缩略图时）
+const videoPlayerVisible = ref(false)
+const videoPlayerRef = ref(null)
+const currentVideoUrl = ref('')
+const currentVideoName = ref('')
+
+// 浏览器原生支持的视频格式（MIME types）
+const SUPPORTED_VIDEO_FORMATS = [
+  'video/mp4',
+  'video/webm',
+  'video/ogg',
+  'video/quicktime',  // .mov - 部分浏览器支持
+  'video/x-matroska',  // .mkv - 部分浏览器支持
+]
+
+// 浏览器原生不支持的视频格式（扩展名）
+const UNSUPPORTED_VIDEO_EXTENSIONS = ['wmv', 'avi', 'flv', 'rmvb', 'rm', 'asf', 'vob', 'mpg', 'mpeg', 'ts', 'm2ts']
+
+function getVideoFormat(url) {
+  if (!url) return ''
+  const match = url.match(/\.([a-zA-Z0-9]+)(?:\?|$|#)/)
+  if (match) {
+    return match[1].toLowerCase()
+  }
+  return '未知'
+}
+
+function isVideoFormatSupported(url) {
+  if (!url) return false
+  const ext = getVideoFormat(url)
+  // 不支持的扩展名
+  if (UNSUPPORTED_VIDEO_EXTENSIONS.includes(ext)) {
+    return false
+  }
+  // mp4 / webm / ogg / mov - 一般都支持
+  if (['mp4', 'm4v', 'webm', 'ogg', 'mov'].includes(ext)) {
+    return true
+  }
+  // 没有扩展名或未识别 - 尝试加载，让video标签的error事件兜底
+  return true
+}
+
+function onVideoError() {
+  console.warn('视频加载失败，可能是格式不支持:', currentVideoUrl.value)
+}
+
+function openVideoPlayer(media) {
+  currentVideoUrl.value = media.url
+  currentVideoName.value = media.name || '视频'
+  videoPlayerVisible.value = true
+}
+
+function closeVideoPlayer() {
+  videoPlayerVisible.value = false
+  currentVideoUrl.value = ''
+  currentVideoName.value = ''
+}
+
 function startRename(sessionId) {
   const session = sessions.value.find((s) => s.id === sessionId)
   if (session) {
@@ -1119,14 +1308,10 @@ function detectFraud(text) {
     saveRoleToMemory(detectedRole)
     console.log(`🎭 角色已自动切换为: ${detectedRole}`)
     
-    // 显示角色自动切换提示
-    const roleInfo = roleOptions.find(opt => opt.value === detectedRole)
+    // 同步更新用户信息中的角色
+    const roleInfo = profileRoleOptions.find(opt => opt.value === detectedRole)
     if (roleInfo) {
-      roleSwitchTipText.value = `已自动识别为您是${roleInfo.label}，已切换到对应模式`
-      showRoleSwitchTip.value = true
-      setTimeout(() => {
-        showRoleSwitchTip.value = false
-      }, 2000)
+      updateUserRole(detectedRole)
     }
   }
   
@@ -1445,10 +1630,10 @@ const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://lo
 
 async function fetchPersuasion(fraudType, riskLevel, userRole) {
   try {
-    const res = await fetch(`${API_BASE}/persuasion/generate`, {
+    const res = await fetch(`${API_BASE}/v1/persuasion`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fraudType, riskLevel, userRole }),
+      body: JSON.stringify({ fraud_type: fraudType, risk_level: riskLevel, user_role: userRole }),
     })
     const data = await res.json()
     if (data.success && data.message) {
@@ -1520,7 +1705,7 @@ function handleRiskResult(result, text, session) {
     reportGenerated.value = false
     showPersuasion.value = false
     persuasionMessage.value = ''
-    fetchPersuasion(result.fraudType, result.riskLevel, result.userRole || 'default').then(msg => {
+    fetchPersuasion(result.fraudType, result.riskLevel, userInfo.value.role || 'default').then(msg => {
       if (msg) {
         persuasionMessage.value = msg
         showPersuasion.value = true
@@ -1571,58 +1756,302 @@ function closeMediumRiskModal() {
   showMediumRiskModal.value = false
 }
 
+// 下载PDF格式的安全报告（浏览器端生成）
+function downloadPdfReport() {
+  const result = riskResult.value
+  if (!result) return
+
+  const now = new Date().toLocaleString('zh-CN')
+  const roleLabel = userInfo.value.roleLabel || '中青年'
+  const userName = userInfo.value.nickname || '用户'
+
+  // 构建HTML报告内容
+  const htmlContent = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>反诈安全报告</title>
+  <style>
+    @page { margin: 20mm; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", sans-serif;
+      color: #2F3437;
+      line-height: 1.7;
+      padding: 0;
+      margin: 0;
+    }
+    .report-header {
+      text-align: center;
+      padding: 20px 0 16px;
+      border-bottom: 3px solid #d32f2f;
+      margin-bottom: 20px;
+    }
+    .report-header h1 {
+      font-size: 22px;
+      color: #d32f2f;
+      margin: 0 0 6px;
+    }
+    .report-header .meta {
+      font-size: 12px;
+      color: #999;
+    }
+    .risk-banner {
+      background: #fff3e0;
+      border-left: 4px solid #d32f2f;
+      padding: 12px 16px;
+      margin: 16px 0;
+      border-radius: 4px;
+    }
+    .risk-banner .label {
+      font-size: 14px;
+      font-weight: bold;
+      color: #d32f2f;
+    }
+    .risk-banner .value {
+      font-size: 16px;
+      font-weight: bold;
+      color: #d32f2f;
+      margin-top: 4px;
+    }
+    h2 {
+      font-size: 16px;
+      color: #1976d2;
+      border-bottom: 2px solid #e3f2fd;
+      padding-bottom: 6px;
+      margin: 24px 0 12px;
+    }
+    .step-list {
+      list-style: none;
+      padding: 0;
+    }
+    .step-list li {
+      padding: 8px 12px;
+      margin: 6px 0;
+      background: #f5f7fa;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .step-list li strong {
+      color: #d32f2f;
+    }
+    .persuasion-box {
+      background: #e3f2fd;
+      border-left: 4px solid #1976d2;
+      padding: 12px 16px;
+      margin: 16px 0;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .contact-box {
+      background: #f5f5f5;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin: 16px 0;
+    }
+    .footer {
+      margin-top: 30px;
+      padding-top: 12px;
+      border-top: 1px solid #e0e0e0;
+      font-size: 11px;
+      color: #999;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="report-header">
+    <h1>🛡️ 反诈安全报告</h1>
+    <div class="meta">
+      <span>报告时间：${now}</span>
+      &nbsp;|&nbsp;
+      <span>用户：${userName}（${roleLabel}）</span>
+    </div>
+  </div>
+
+  <div class="risk-banner">
+    <div class="label">⚠️ 高风险预警</div>
+    <div class="value">${result.fraudType || '未知诈骗类型'}</div>
+    <div style="margin-top:4px;font-size:13px;color:#666;">
+      置信度：${(result.confidence * 100).toFixed(0)}%
+    </div>
+  </div>
+
+  <h2>⏳ 立即执行以下操作</h2>
+  <ul class="step-list">
+    <li><strong>⛔ 立刻停止</strong> 所有转账、汇款、充值操作！</li>
+    <li><strong>📞 马上拨打 110</strong> 报警，说明遭遇「${result.fraudType}」</li>
+    <li><strong>🏦 联系银行客服</strong> 申请紧急止付（已转账情况）</li>
+    <li><strong>📋 保存聊天记录</strong>、转账截图等所有证据</li>
+  </ul>
+
+  ${result.matchedCases?.[0]?.defense ? `
+  <h2>🔒 加强防范</h2>
+  <p style="font-size:13px;padding:8px 12px;background:#f5f7fa;border-radius:6px;">${result.matchedCases[0].defense}</p>
+  ` : ''}
+
+  ${persuasionMessage.value ? `
+  <h2>💬 反诈卫士提醒您</h2>
+  <div class="persuasion-box">${persuasionMessage.value}</div>
+  ` : ''}
+
+  <h2>📞 紧急联系方式</h2>
+  <div class="contact-box">
+    <strong>报警电话：</strong>110<br>
+    <strong>反诈专线：</strong>96110<br>
+    <strong>银行客服：</strong>请拨打银行卡背面客服电话
+  </div>
+
+  <div class="footer">
+    <p>本报告由 AI 反诈智能体自动生成，仅供参考，不构成法律意见。</p>
+    <p>如有紧急情况，请立即拨打 110 报警。</p>
+  </div>
+</body>
+</html>`
+
+  // 在新窗口中打开并打印
+  const printWindow = window.open('', '_blank')
+  if (printWindow) {
+    printWindow.document.write(htmlContent)
+    printWindow.document.close()
+    printWindow.focus()
+    setTimeout(() => {
+      printWindow.print()
+    }, 500)
+  }
+}
+
+// 生成视频第一帧作为海报图
+function generateVideoPoster(videoUrl) {
+  return new Promise((resolve) => {
+    const video = document.createElement('video')
+    video.crossOrigin = 'anonymous'
+    video.preload = 'auto'
+    video.muted = true
+    video.playsInline = true
+    video.src = videoUrl
+
+    let resolved = false
+    const safeResolve = (val) => {
+      if (!resolved) {
+        resolved = true
+        resolve(val)
+      }
+    }
+
+    // 加载元数据后尝试获取第一帧
+    video.addEventListener('loadedmetadata', () => {
+      try {
+        // 设置到第一帧附近
+        video.currentTime = Math.min(0.5, (video.duration || 1) * 0.05)
+      } catch (e) {
+        // 忽略
+      }
+    })
+
+    // 视频数据可绘制时
+    video.addEventListener('loadeddata', () => {
+      try {
+        drawFrame()
+      } catch (e) {
+        safeResolve('')
+      }
+    })
+
+    // 视频可播放时再尝试
+    video.addEventListener('canplay', () => {
+      try {
+        drawFrame()
+      } catch (e) {
+        safeResolve('')
+      }
+    })
+
+    function drawFrame() {
+      const w = video.videoWidth || 320
+      const h = video.videoHeight || 240
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(video, 0, 0, w, h)
+      const posterUrl = canvas.toDataURL('image/jpeg', 0.6)
+      safeResolve(posterUrl)
+    }
+
+    video.addEventListener('error', () => safeResolve(''))
+
+    // 超时处理（5秒）
+    setTimeout(() => {
+      if (video.readyState >= 2) {
+        try { drawFrame() } catch (e) { safeResolve('') }
+      } else {
+        safeResolve('')
+      }
+    }, 5000)
+  })
+}
+
 // AI生成安全报告
 function generateSecurityReport() {
   const session = activeSession.value
   if (!session || !riskResult.value) return
 
   const result = riskResult.value
-  const roleLabel = roleOptions.find(r => r.value === result.userRole)?.label || '中青年'
-
-  // 构建安全报告内容（仅高风险时生成完整报告）
-  let reportContent = '🛡️ **安全监测报告**\n\n'
+  const roleLabel = userInfo.value.roleLabel || '中青年'
 
   reportGenerated.value = true
-  
-  // 如果角色是自动识别的，显示识别提示
-  if (result.roleDetected) {
-    reportContent += `🎯 已为您启用「${roleLabel}」专属防护策略\n`
-  }
-  
-  // 仅高风险时明确标注风险等级
-  if (result.riskLevel === 'high') {
-    reportContent += `\n⚠️ **风险等级：高风险**\n`
-    reportContent += `\n📊 **风险评估**\n`
-    reportContent += `- 识别类型：${result.fraudType}\n`
-    reportContent += `- 置信度：${(result.confidence * 100).toFixed(0)}%\n`
 
-    // 处理建议（共情安抚式）
-    reportContent += '\n🔧 **处理建议**\n'
-    reportContent += '- ⛔ 立即停止任何转账操作\n'
-    reportContent += '- 📞 拨打110报警或前往最近派出所\n'
-    reportContent += '- 🏦 联系银行冻结相关账户\n'
-    reportContent += '- 📋 保存聊天记录、转账记录等证据\n'
+  // 构建安全报告内容（仅高风险时生成完整报告）
+  let reportContent = ''
+
+  if (result.riskLevel === 'high') {
+    reportContent += `🚨 **高危预警！请立即查看！**\n\n`
+    reportContent += `检测到您正在遭遇「${result.fraudType}」，请立即按照以下步骤操作：\n\n`
+    
+    reportContent += `**第一步：立即止损**\n`
+    reportContent += `1. 立刻停止所有转账、汇款操作\n`
+    reportContent += `2. 如果已经转账，马上拨打银行客服申请紧急止付\n`
+    reportContent += `3. 不要相信对方说的任何「解冻」「安全账户」「保证金」\n\n`
+
+    reportContent += `**第二步：立即报警**\n`
+    reportContent += `1. 拨打 110 报警电话，说明遭遇了「${result.fraudType}」\n`
+    reportContent += `2. 前往最近的派出所，带上手机和聊天记录\n`
+    reportContent += `3. 报警越及时，追回损失的可能性越大\n\n`
+
+    reportContent += `**第三步：保留证据**\n`
+    reportContent += `1. 截图保存所有聊天记录（不要删除！）\n`
+    reportContent += `2. 保存转账记录、银行流水\n`
+    reportContent += `3. 记录对方账号、电话、微信号等所有信息\n\n`
 
     // 防御指南
     if (result.matchedCases?.[0]?.defense) {
-      reportContent += `\n🛡️ **防御指南**\n${result.matchedCases[0].defense}\n`
+      reportContent += `**第四步：加强防范**\n`
+      reportContent += `${result.matchedCases[0].defense}\n\n`
     }
 
-    // 添加AI劝导话术（新功能）
+    // 添加AI劝导话术（实用话术，让用户看清骗局）
     if (persuasionMessage.value) {
-      reportContent += `\n💬 **AI劝导话术**\n${persuasionMessage.value}\n`
+      reportContent += `**💬 反诈卫士提醒您**\n`
+      reportContent += `${persuasionMessage.value}\n\n`
     }
 
-    reportContent += '\n💡 **温馨提示**\n'
-    reportContent += '遇到这种情况确实让人担心，但你现在主动来核实是非常正确的决定。记住，保护好自己的账户和个人信息，就是保护自己。'
+    reportContent += `**📞 紧急联系方式**\n`
+    reportContent += `- 报警电话：110\n`
+    reportContent += `- 反诈专线：96110\n`
+    reportContent += `- 银行客服：请拨打银行卡背面客服电话\n\n`
+
+    reportContent += `💡 您主动来核实是非常正确的决定！${roleLabel}群体是诈骗分子的重点目标，保持警惕就是最好的防护。`
   }
 
   // 添加AI消息
-  addMessage(session, {
-    role: 'assistant',
-    type: 'text',
-    content: reportContent,
-  })
+  if (reportContent) {
+    addMessage(session, {
+      role: 'assistant',
+      type: 'text',
+      content: reportContent,
+    })
+  }
 }
 
 // 发送消息入口
@@ -1828,7 +2257,7 @@ async function send() {
 
 // 获取兜底回复（当API调用失败时）
 function getFallbackReply(text, riskResult) {
-  const roleLabel = roleOptions.find(r => r.value === riskResult.userRole)?.label || '中青年'
+  const roleLabel = userInfo.value.roleLabel || '中青年'
   
   if (riskResult.scene === 'chat') {
     return `你好呀～我是你的专属反诈卫士！有什么我可以帮你的吗？`
@@ -1871,6 +2300,14 @@ onMounted(() => {
   document.addEventListener('click', closeAllMenus)
   // 自适应进化：系统启动时自动完成更新（控制台展示技术细节）
   simulateAdaptiveEvolution()
+  
+  // 注册 API 错误处理回调
+  setOnApiError((message) => {
+    showApiErrorMsg(message)
+  })
+  
+  // 从后端加载用户信息
+  fetchUserProfile()
 })
 
 onUnmounted(() => {
@@ -1882,7 +2319,10 @@ onUnmounted(() => {
   <div class="doubao-layout" @click="closeAllMenus">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h2 class="sidebar-title">反诈卫士</h2>
+        <div class="sidebar-title-row">
+          <AiAvatar variant="fraud" size="sm" />
+          <h2 class="sidebar-title">反诈卫士</h2>
+        </div>
         <button class="new-chat" type="button" @click="openNewSession">+ 新对话</button>
       </div>
       <div class="session-list">
@@ -1933,15 +2373,20 @@ onUnmounted(() => {
           </template>
         </div>
       </div>
+      <!-- 用户信息底部 -->
+      <div class="sidebar-user" @click="openUserProfile">
+        <UserAvatar size="sm" />
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name">{{ userInfo.nickname }}</span>
+          <span class="sidebar-user-role">{{ userInfo.roleLabel }}</span>
+        </div>
+      </div>
     </aside>
 
     <section class="chat-main">
       <header class="chat-header">
-        <AiAvatar variant="fraud" size="md" />
-        <div class="chat-header-text">
-          <h1>{{ title }}</h1>
-          <p>智能反诈顾问 · 支持文字、图片、语音输入</p>
-        </div>
+        <h1 class="chat-header-title">{{ activeSession?.title || title }}</h1>
+        <div class="chat-header-right"></div>
       </header>
       
       <!-- 自适应进化状态提示 -->
@@ -2016,7 +2461,20 @@ onUnmounted(() => {
                         </div>
                       </div>
                       <div v-else-if="media.type === 'video'" class="media-item media-item--video">
-                        <video class="message-video" :src="media.url" controls preload="metadata"></video>
+                        <div class="video-thumbnail" @click="openVideoPlayer(media)">
+                          <img
+                            v-if="getVideoPoster(media.url)"
+                            :src="getVideoPoster(media.url)"
+                            :alt="media.name || '视频'"
+                            class="video-thumbnail-img"
+                          />
+                          <div v-else class="video-thumbnail-placeholder">
+                            <span class="video-icon">🎬</span>
+                          </div>
+                          <div class="video-play-overlay">
+                            <span class="video-play-icon">▶</span>
+                          </div>
+                        </div>
                         <span class="media-name">{{ media.name || '视频' }}</span>
                       </div>
                     </template>
@@ -2068,36 +2526,6 @@ onUnmounted(() => {
           @change="handleVideoChange"
         />
         
-        <!-- 角色选择器 -->
-        <div class="role-selector">
-          <span class="role-label">👤 用户角色：</span>
-          <div class="role-dropdown">
-            <button
-              type="button"
-              class="role-dropdown-selected"
-              :class="{ 'role-dropdown-selected--open': showRoleDropdown }"
-              @click="showRoleDropdown = !showRoleDropdown"
-            >
-              <span class="role-dropdown-selected-content">
-                <span class="role-dropdown-selected-icon">{{ currentRoleOption.icon }}</span>
-                <span class="role-dropdown-selected-text">{{ currentRoleOption.label }}</span>
-              </span>
-              <span class="role-dropdown-arrow" :class="{ 'role-dropdown-arrow--open': showRoleDropdown }">▼</span>
-            </button>
-            <div class="role-dropdown-menu" v-show="showRoleDropdown">
-              <div
-                v-for="option in roleOptions"
-                :key="option.value"
-                class="role-dropdown-item"
-                :class="{ 'role-dropdown-item--active': userRole === option.value }"
-                @click="selectRole(option.value)"
-              >
-                <span class="role-dropdown-item-icon">{{ option.icon }}</span>
-                <span class="role-dropdown-item-label">{{ option.label }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
         <div class="composer-bar">
             <!-- 媒体预览区域 -->
             <div v-if="pendingMedia.length > 0" class="media-preview-area">
@@ -2119,7 +2547,20 @@ onUnmounted(() => {
                 </template>
                 <template v-else-if="media.type === 'video'">
                   <div class="media-preview-video">
-                    <video :src="media.url" controls preload="metadata" class="media-preview-video-player"></video>
+                    <div class="video-thumbnail">
+                      <img
+                        v-if="getVideoPoster(media.url)"
+                        :src="getVideoPoster(media.url)"
+                        :alt="media.name"
+                        class="video-thumbnail-img"
+                      />
+                      <div v-else class="video-thumbnail-placeholder">
+                        <span class="video-icon">🎬</span>
+                      </div>
+                      <div class="video-play-overlay">
+                        <span class="video-play-icon">▶</span>
+                      </div>
+                    </div>
                     <span class="media-name">{{ media.name }}</span>
                   </div>
                 </template>
@@ -2149,79 +2590,56 @@ onUnmounted(() => {
     <div v-if="showRiskModal" class="risk-modal-overlay" @click.self="closeRiskModalAndReply">
       <div class="risk-modal" :class="`risk-modal--${riskResult?.riskLevel}`">
         <div class="risk-modal-header">
-          <span class="risk-icon">
-            <template v-if="riskResult?.riskLevel === 'high'">🚨</template>
-            <template v-else-if="riskResult?.riskLevel === 'medium'">⚠️</template>
-            <template v-else>✅</template>
-          </span>
-          <h3>
-            <template v-if="riskResult?.riskLevel === 'high'">高风险紧急预警</template>
-            <template v-else-if="riskResult?.riskLevel === 'medium'">中等风险预警</template>
-            <template v-else>安全提示</template>
-          </h3>
+          <span class="risk-icon">🚨</span>
+          <h3>高危预警！请立即处理</h3>
         </div>
         <div class="risk-modal-body">
-          <div class="risk-info">
-            <!-- 角色自动识别提示 -->
-            <p v-if="riskResult?.roleDetected" class="role-detected-tip">
-              🎯 已自动识别您的角色身份
-            </p>
-            <!-- 角色信息 -->
-            <p class="risk-role">
-              用户角色：
-              <span class="role-badge">
-                {{ roleOptions.find(r => r.value === riskResult?.userRole)?.icon || '👨' }}
-                {{ roleOptions.find(r => r.value === riskResult?.userRole)?.label || '中青年' }}
-              </span>
-              <span v-if="riskResult?.roleDetected" class="role-auto-badge">自动识别</span>
-            </p>
-            <p class="risk-type">识别类型：<strong>{{ riskResult?.fraudType }}</strong></p>
-            <p class="risk-level">
-              风险等级：
-              <span class="risk-badge" :class="`risk-badge--${riskResult?.riskLevel}`">
-                {{ riskResult?.riskLevel === 'high' ? '高风险' : riskResult?.riskLevel === 'medium' ? '中风险' : '低风险' }}
-              </span>
-              <!-- 显示风险调整说明 -->
-              <span v-if="riskResult?.baseRiskLevel && riskResult?.baseRiskLevel !== riskResult?.riskLevel" class="risk-adjusted">
-                (已根据角色调整)
-              </span>
-            </p>
-            <p class="risk-confidence">置信度：{{ (riskResult?.confidence * 100).toFixed(0) }}%</p>
-          </div>
-          
-          <div class="risk-warning" :class="`risk-warning--${riskResult?.riskLevel}`">
-            <template v-if="riskResult?.riskLevel === 'high'">
-              <p>⚠️ 警告：检测到高风险诈骗内容！</p>
-              <p>请立即停止操作，不要转账、不要提供任何信息！</p>
-              <p>建议立即联系家人或拨打110报警！</p>
-            </template>
-            <template v-else-if="riskResult?.riskLevel === 'medium'">
-              <p>⚠️ 提醒：检测到可疑内容，请提高警惕！</p>
-              <p>切勿向陌生人转账、点击不明链接或提供个人信息。</p>
-            </template>
-            <template v-else>
-              <p>✅ 未检测到明显风险，但仍请保持警惕。</p>
-              <p>不轻信陌生人的转账要求，不点击不明链接。</p>
-            </template>
-          </div>
-          
-          <!-- 监护人通知（高风险显示） -->
-          <div v-if="riskResult?.riskLevel === 'high'" class="guardian-notice">
-            <p>📱 已自动向监护人 <strong>{{ guardianPhone }}</strong> 发送高危预警通知</p>
-          </div>
-          
-          <!-- AI劝导话术（高风险显示，异步加载） -->
-          <div v-if="showPersuasion && persuasionMessage" class="persuasion-section">
-            <div class="persuasion-header">
-              <span class="persuasion-icon">💬</span>
-              <span class="persuasion-label">AI 劝导话术</span>
+          <!-- 风险等级和类型 -->
+          <div class="report-section">
+            <div class="report-risk-level" :class="`report-risk-level--${riskResult?.riskLevel}`">
+              <span class="report-risk-icon">⚠️</span>
+              <span class="report-risk-text">高风险 · {{ riskResult?.fraudType || '未知诈骗类型' }}</span>
             </div>
-            <div class="persuasion-content">{{ persuasionMessage }}</div>
+            <div class="report-confidence">
+              置信度：{{ (riskResult?.confidence * 100).toFixed(0) }}%
+            </div>
+          </div>
+
+          <!-- 紧急处理步骤 -->
+          <div class="report-section">
+            <h4 class="report-section-title report-section-title--urgent">⏳ 立即执行以下操作</h4>
+            <ul class="report-suggestions">
+              <li class="suggestion-urgent">
+                <span class="suggestion-icon">⛔</span>
+                <span><strong>立刻停止</strong>所有转账、汇款、充值操作！</span>
+              </li>
+              <li>
+                <span class="suggestion-icon">📞</span>
+                <span>马上拨打 <strong>110</strong> 报警，说明遭遇「{{ riskResult?.fraudType }}」</span>
+              </li>
+              <li>
+                <span class="suggestion-icon">🏦</span>
+                <span>联系银行客服申请紧急止付（已转账情况）</span>
+              </li>
+              <li>
+                <span class="suggestion-icon">📋</span>
+                <span>保存聊天记录、转账截图等所有证据</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- AI劝导话术（高风险显示，异步加载） -->
+          <div v-if="showPersuasion && persuasionMessage" class="report-section report-section--persuasion">
+            <h4 class="report-section-title">💬 反诈卫士提醒您</h4>
+            <div class="report-persuasion-content">{{ persuasionMessage }}</div>
           </div>
         </div>
         <div class="risk-modal-footer">
+          <button class="btn btn-secondary" @click="downloadPdfReport">
+            📄 下载PDF报告
+          </button>
           <button class="btn btn-primary" @click="closeRiskModalAndReply">
-            {{ reportGenerated ? '已生成报告' : '生成安全报告' }}
+            {{ reportGenerated ? '已生成安全报告' : '确认并生成安全报告' }}
           </button>
         </div>
       </div>
@@ -2255,6 +2673,103 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- 视频播放器弹窗 -->
+    <div v-if="videoPlayerVisible" class="video-player-overlay" @click.self="closeVideoPlayer">
+      <div class="video-player-modal">
+        <div class="video-player-header">
+          <span class="video-player-title">{{ currentVideoName }}</span>
+          <button class="video-player-close" @click="closeVideoPlayer">✕</button>
+        </div>
+        <div class="video-player-body">
+          <video
+            v-if="isVideoFormatSupported(currentVideoUrl)"
+            ref="videoPlayerRef"
+            :src="currentVideoUrl"
+            class="video-player-video"
+            controls
+            autoplay
+            preload="auto"
+            @error="onVideoError"
+          ></video>
+          <div v-else class="video-unsupported">
+            <div class="video-unsupported-icon">⚠️</div>
+            <h4 class="video-unsupported-title">浏览器暂不支持此视频格式</h4>
+            <p class="video-unsupported-text">
+              视频格式：<strong>{{ getVideoFormat(currentVideoUrl) }}</strong>
+            </p>
+            <p class="video-unsupported-tip">
+              Chrome / Firefox / Safari 浏览器原生不支持 <strong>.wmv / .avi / .flv / .mkv</strong> 等格式。<br>
+              建议：<br>
+              • 转换为 <strong>.mp4</strong>（H.264 编码）后上传<br>
+              • 或使用 <strong>Microsoft Edge</strong> 浏览器打开<br>
+              • 或下载后用本地播放器（如 VLC、PotPlayer）播放
+            </p>
+            <div class="video-unsupported-actions">
+              <a :href="currentVideoUrl" :download="currentVideoName" class="btn btn-primary">
+                📥 下载视频
+              </a>
+              <button class="btn btn-secondary" @click="closeVideoPlayer">关闭</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- API 错误提示 -->
+    <transition name="fade">
+      <div v-if="showApiError" class="api-error-toast">
+        <span class="api-error-icon">❌</span>
+        <div class="api-error-content">
+          <p class="api-error-title">API 连接失败</p>
+          <p class="api-error-message">{{ apiErrorMessage }}</p>
+        </div>
+        <button class="api-error-close" @click="showApiError = false">✕</button>
+      </div>
+    </transition>
+    
+    <!-- 用户资料编辑弹窗 -->
+    <div v-if="showUserProfile" class="risk-modal-overlay" @click.self="closeUserProfile">
+      <div class="profile-modal">
+        <div class="profile-modal-header">
+          <span class="profile-modal-icon">👤</span>
+          <h3>个人信息</h3>
+          <button class="profile-modal-close" @click="closeUserProfile">✕</button>
+        </div>
+        <div class="profile-modal-body">
+          <div class="profile-field">
+            <label class="profile-label">昵称</label>
+            <input
+              v-model="userInfo.nickname"
+              class="profile-input"
+              type="text"
+              placeholder="请输入您的昵称"
+              maxlength="20"
+            />
+          </div>
+          <div class="profile-field">
+            <label class="profile-label">用户角色</label>
+            <p class="profile-desc">选择您的角色，可以让我们更好地为您提供反诈服务</p>
+            <select
+              v-model="userInfo.role"
+              class="profile-select"
+              @change="updateUserRole(userInfo.role)"
+            >
+              <option v-for="role in profileRoleOptions" :key="role.value" :value="role.value">
+                {{ role.label }} - {{ role.desc }}
+              </option>
+            </select>
+          </div>
+          <div class="profile-field">
+            <label class="profile-label">登录时间</label>
+            <p class="profile-value">{{ userInfo.loginTime }}</p>
+          </div>
+        </div>
+        <div class="profile-modal-footer">
+          <button class="btn btn-primary" @click="saveUserInfo(); saveUserProfile(); closeUserProfile()">保存</button>
+        </div>
+      </div>
+    </div>
     
     <!-- 删除确认弹窗 -->
     <div v-if="showDeleteModal" class="risk-modal-overlay" @click.self="cancelDeleteSession">
@@ -2273,14 +2788,6 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-    
-    <!-- 角色切换提示 -->
-    <transition name="fade">
-      <div v-if="showRoleSwitchTip" class="role-switch-tip">
-        <span class="role-switch-tip-icon">✅</span>
-        <span class="role-switch-tip-text">{{ roleSwitchTipText }}</span>
-      </div>
-    </transition>
   </div>
 </template>
 
@@ -2327,8 +2834,15 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(74, 144, 217, 0.08);
 }
 
+.sidebar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
 .sidebar-title {
-  margin: 0 0 0.6rem;
+  margin: 0;
   font-size: 0.95rem;
   color: #2F3437;
   font-weight: 600;
@@ -2478,6 +2992,46 @@ onUnmounted(() => {
   min-width: 0;
 }
 
+/* ==================== 侧边栏用户信息底部 ==================== */
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.9rem;
+  border-top: 1px solid rgba(74, 144, 217, 0.08);
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.sidebar-user:hover {
+  background: rgba(74, 144, 217, 0.04);
+}
+
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-user-name {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #2F3437;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-user-role {
+  font-size: 0.72rem;
+  color: #8a9bb5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ==================== 主聊天区域 ==================== */
 .chat-main {
   position: relative;
@@ -2491,26 +3045,27 @@ onUnmounted(() => {
 .chat-header {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0.7rem 1rem;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
   border-bottom: 1px solid rgba(74, 144, 217, 0.10);
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
-.chat-header-text h1 {
+.chat-header-title {
+  flex: 1;
+  text-align: center;
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
   color: #2F3437;
 }
 
-.chat-header-text p {
-  margin-top: 0.15rem;
-  color: #787774;
-  font-size: 0.78rem;
+.chat-header-right {
+  width: 32px;
+  flex-shrink: 0;
 }
-
 /* ==================== 自适应进化状态 ==================== */
 .evolution-status {
   background: rgba(74, 144, 217, 0.06);
@@ -2664,6 +3219,151 @@ onUnmounted(() => {
   display: block;
   border-radius: 8px;
   background: #000;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.message-video[poster] {
+  object-fit: cover;
+  min-height: 120px;
+  background: #1a1a2e;
+}
+
+/* ==================== 视频缩略图组件 ==================== */
+.video-thumbnail {
+  position: relative;
+  width: 100%;
+  min-width: 10rem;
+  max-width: 14rem;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1a1a2e;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.video-thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.video-thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.video-thumbnail-placeholder .video-icon {
+  font-size: 2.5rem;
+}
+
+.video-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+  transition: background 0.2s;
+}
+
+.video-thumbnail:hover .video-play-overlay {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.video-play-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1a1a2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  padding-left: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ==================== 视频播放器弹窗 ==================== */
+.video-player-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 2rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.video-player-modal {
+  background: #000;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.video-player-header {
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  background: #1a1a2e;
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.video-player-title {
+  flex: 1;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.video-player-close {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.video-player-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.video-player-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.video-player-video {
+  width: 100%;
+  max-height: 80vh;
+  display: block;
+  outline: none;
 }
 
 .multimedia-message {
@@ -2742,6 +3442,99 @@ onUnmounted(() => {
   color: #787774;
 }
 
+/* ==================== 视频格式不支持提示 ==================== */
+.video-unsupported {
+  width: 100%;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 18rem;
+}
+
+.video-unsupported-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 2px 8px rgba(255, 165, 0, 0.4));
+}
+
+.video-unsupported-title {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.video-unsupported-text {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 1rem;
+}
+
+.video-unsupported-text strong {
+  color: #fbbf24;
+  font-family: 'Consolas', 'Monaco', monospace;
+  background: rgba(251, 191, 36, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.video-unsupported-tip {
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0 0 1.5rem;
+  max-width: 28rem;
+  text-align: left;
+}
+
+.video-unsupported-tip strong {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.video-unsupported-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.video-unsupported-actions .btn {
+  display: inline-block;
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.video-unsupported-actions .btn-primary {
+  background: linear-gradient(135deg, #4A90D9, #357ABD);
+  color: #fff;
+}
+
+.video-unsupported-actions .btn-primary:hover {
+  background: linear-gradient(135deg, #5B9EE0, #3D86C9);
+  transform: translateY(-1px);
+}
+
+.video-unsupported-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.video-unsupported-actions .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 /* ==================== 底部输入区域 ==================== */
 .composer {
   position: relative;
@@ -2753,166 +3546,337 @@ onUnmounted(() => {
   -webkit-backdrop-filter: blur(20px);
 }
 
-.role-selector {
+/* ==================== API 错误提示 ==================== */
+.api-error-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  background: #fff;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-left: 4px solid #ef4444;
+  border-radius: 12px;
+  padding: 16px 20px;
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  padding: 0.4rem 0.7rem;
-  background: rgba(74, 144, 217, 0.06);
-  border-radius: 8px;
-  border: 1px solid rgba(74, 144, 217, 0.14);
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
+  z-index: 3000;
+  max-width: 420px;
+  animation: slideInRight 0.3s ease;
 }
 
-.role-label {
-  font-size: 0.8rem;
-  color: #5a6a7e;
-  font-weight: 500;
-  white-space: nowrap;
+@keyframes slideInRight {
+  0% { transform: translateX(100px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
 }
 
-.role-dropdown {
-  position: relative;
-  width: 145px;
-  min-width: 145px;
+.api-error-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
-.role-dropdown-selected {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.35rem 0.7rem;
-  border: 1px solid rgba(74, 144, 217, 0.18);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.7);
-  color: #2F3437;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  width: 100%;
-  box-sizing: border-box;
-  font-weight: 500;
-}
-
-.role-dropdown-selected:hover {
-  border-color: rgba(74, 144, 217, 0.4);
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.role-dropdown-selected--open {
-  border-color: rgba(74, 144, 217, 0.5);
-  background: rgba(74, 144, 217, 0.08);
-}
-
-.role-dropdown-selected-content {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  white-space: nowrap;
-  overflow: hidden;
+.api-error-content {
   flex: 1;
   min-width: 0;
 }
 
-.role-dropdown-selected-icon {
+.api-error-title {
+  margin: 0 0 4px;
   font-size: 0.9rem;
+  font-weight: 600;
+  color: #dc2626;
 }
 
-.role-dropdown-selected-text {
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.api-error-message {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+  line-height: 1.4;
 }
 
-.role-dropdown-arrow {
-  font-size: 0.65rem;
-  color: #5a6a7e;
-  transition: transform 0.2s;
-  margin-left: 0.25rem;
-}
-
-.role-dropdown-arrow--open {
-  transform: rotate(180deg);
-}
-
-.role-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(74, 144, 217, 0.18);
-  border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(74, 144, 217, 0.12);
-  z-index: 100;
-  max-height: 160px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  box-sizing: border-box;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-.role-dropdown-menu::-webkit-scrollbar {
-  width: 4px;
-}
-
-.role-dropdown-menu::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 2px;
-}
-
-.role-dropdown-menu::-webkit-scrollbar-thumb {
-  background: rgba(74, 144, 217, 0.25);
-  border-radius: 2px;
-}
-
-.role-dropdown-menu::-webkit-scrollbar-thumb:hover {
-  background: rgba(74, 144, 217, 0.4);
-}
-
-.role-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.6rem;
+.api-error-close {
+  background: none;
+  border: none;
+  color: #9ca3af;
   cursor: pointer;
-  transition: all 0.15s;
-  border-bottom: 1px solid rgba(74, 144, 217, 0.08);
-  white-space: nowrap;
-}
-
-.role-dropdown-item:last-child {
-  border-bottom: none;
-}
-
-.role-dropdown-item:hover {
-  background: rgba(74, 144, 217, 0.08);
-}
-
-.role-dropdown-item--active {
-  background: rgba(74, 144, 217, 0.12);
-  font-weight: 500;
-}
-
-.role-dropdown-item-icon {
-  font-size: 0.9rem;
-  width: 1.1rem;
-  text-align: center;
+  font-size: 1rem;
+  padding: 2px;
   flex-shrink: 0;
 }
 
-.role-dropdown-item-label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #2F3437;
-  white-space: nowrap;
+.api-error-close:hover {
+  color: #6b7280;
 }
 
-.role-dropdown-item--active .role-dropdown-item-label {
-  color: #1F6C9F;
+/* ==================== 用户资料编辑弹窗 ==================== */
+.profile-modal {
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2);
+  animation: modalSlideUp 0.3s ease;
+}
+
+.profile-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(74, 144, 217, 0.1);
+}
+
+.profile-modal-icon {
+  font-size: 1.5rem;
+}
+
+.profile-modal-header h3 {
+  margin: 0;
+  flex: 1;
+  font-size: 1.1rem;
   font-weight: 600;
+  color: #2F3437;
+}
+
+.profile-modal-close {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.profile-modal-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #6b7280;
+}
+
+.profile-modal-body {
+  padding: 1.5rem;
+}
+
+.profile-field {
+  margin-bottom: 1.25rem;
+}
+
+.profile-field:last-child {
+  margin-bottom: 0;
+}
+
+.profile-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2F3437;
+  margin-bottom: 0.5rem;
+}
+
+.profile-desc {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.profile-input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid rgba(74, 144, 217, 0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #2F3437;
+  background: rgba(255, 255, 255, 0.8);
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.profile-input:focus {
+  outline: none;
+  border-color: #4A90D9;
+  box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.1);
+}
+
+.profile-select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid rgba(74, 144, 217, 0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #2F3437;
+  background: rgba(255, 255, 255, 0.8);
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.profile-select:focus {
+  outline: none;
+  border-color: #4A90D9;
+  box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.1);
+}
+
+.profile-value {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.profile-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(74, 144, 217, 0.1);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ==================== 安全监测报告 ==================== */
+.report-section {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(74, 144, 217, 0.08);
+}
+
+.report-section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.report-section-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2F3437;
+}
+
+.report-section-title--urgent {
+  color: #dc2626;
+}
+
+.report-confidence {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.report-risk-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.report-risk-level--high {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.report-risk-level--medium {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.report-risk-level--low {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.report-risk-icon {
+  font-size: 1.1rem;
+}
+
+.report-risk-text {
+  font-size: 1rem;
+}
+
+.report-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.report-info-item {
+  padding: 0.5rem 0.7rem;
+  background: rgba(74, 144, 217, 0.04);
+  border-radius: 8px;
+  border: 1px solid rgba(74, 144, 217, 0.08);
+}
+
+.report-info-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.2rem;
+}
+
+.report-info-value {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2F3437;
+}
+
+.report-info-value--fraud {
+  color: #dc2626;
+}
+
+.report-suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.report-suggestions li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  font-size: 0.85rem;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.report-suggestions li:last-child {
+  padding-bottom: 0;
+}
+
+.suggestion-icon {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+}
+
+.suggestion-urgent {
+  background: rgba(239, 68, 68, 0.06);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  margin: 0 -0.75rem;
+}
+
+.report-persuasion-content {
+  padding: 0.75rem 1rem;
+  background: rgba(74, 144, 217, 0.04);
+  border: 1px solid rgba(74, 144, 217, 0.1);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: #374151;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.report-section--persuasion {
+  margin-top: 0.5rem;
 }
 
 .hidden-input {
@@ -2993,8 +3957,10 @@ onUnmounted(() => {
 }
 
 .media-preview-item--video {
-  width: 6rem;
-  height: 4rem;
+  width: 14rem;
+  min-height: 10rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .media-preview-image {
@@ -3006,13 +3972,14 @@ onUnmounted(() => {
 .media-preview-video {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
+  align-items: stretch;
+  gap: 0.35rem;
+  width: 100%;
 }
 
 .media-preview-video-player {
   width: 100%;
-  max-height: 8rem;
+  max-height: 12rem;
   border-radius: 6px;
   background: #000;
 }
@@ -3352,16 +4319,6 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.role-auto-badge {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff;
-  font-size: 0.65rem;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 6px;
-  font-weight: 500;
-}
-
 .risk-source {
   font-size: 0.8rem;
   color: #6b7280;
@@ -3499,6 +4456,16 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
 }
 
+.btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+}
+
 .btn-cancel {
   background: #f1f5f9;
   color: #475569;
@@ -3572,42 +4539,6 @@ onUnmounted(() => {
   max-width: 120px;
 }
 
-/* ==================== 角色切换提示 ==================== */
-.role-switch-tip {
-  position: fixed;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff;
-  padding: 14px 28px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 12px 48px rgba(16, 185, 129, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
-  z-index: 3000;
-  animation: tipBounce 0.4s ease;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-@keyframes tipBounce {
-  0% { transform: translateX(-50%) translateY(-30px) scale(0.9); opacity: 0; }
-  50% { transform: translateX(-50%) translateY(5px) scale(1.02); }
-  100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
-}
-
-.role-switch-tip-icon {
-  font-size: 1.2rem;
-}
-
-.role-switch-tip-text {
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
@@ -3616,6 +4547,13 @@ onUnmounted(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* ==================== 聊天头部右側 ==================== */
+.chat-header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
 }
 
 /* ==================== 思考等待标识 ==================== */

@@ -70,7 +70,7 @@ function handleRegister() {
   loading.value = true
   errorMsg.value = ''
 
-  const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8123/api'
+  const API_BASE = '/admin-api/api'
 
   fetch(`${API_BASE}/v1/auth/register`, {
     method: 'POST',
@@ -83,14 +83,22 @@ function handleRegister() {
   })
     .then((res) => res.json())
     .then((data) => {
-      if (data.success) {
+      if (data.code === 200) {
         loading.value = false
         registerSuccess.value = true
+        // 初始化用户信息到 localStorage
+        localStorage.setItem('antiFraud-user-info', JSON.stringify({
+          nickname: form.value.username.trim() || '用户',
+          role: 'youth',
+          roleLabel: '青年',
+          roleIcon: '',
+          loginTime: new Date().toLocaleString('zh-CN'),
+        }))
         setTimeout(() => {
           router.push('/login')
         }, 1500)
       } else {
-        errorMsg.value = data.message || '注册失败'
+        errorMsg.value = data.msg || '注册失败'
         loading.value = false
       }
     })

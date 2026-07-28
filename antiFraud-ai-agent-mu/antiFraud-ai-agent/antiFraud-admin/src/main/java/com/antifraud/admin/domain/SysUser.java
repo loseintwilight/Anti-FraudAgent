@@ -14,6 +14,8 @@ public class SysUser {
     private String role;
     private Integer status;
     private String avatar;
+    private String nickname;
+    private String fraudRole;
     private LocalDateTime lastLoginTime;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -72,6 +74,22 @@ public class SysUser {
 
     public void setAvatar(String avatar) {
         this.avatar = avatar;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public String getFraudRole() {
+        return fraudRole;
+    }
+
+    public void setFraudRole(String fraudRole) {
+        this.fraudRole = fraudRole;
     }
 
     public LocalDateTime getLastLoginTime() {

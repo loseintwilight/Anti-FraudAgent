@@ -1,0 +1,12 @@
+# AI 反诈智能体 Python 辅助服务 — 依赖清单
+# 安装方式: pip install -r requirements.txt
+
+# 核心依赖
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.6
+httpx>=0.27.2
+pydantic>=2.9.2
+
+# 报告生成依赖（可选，如不需要PDF/图片导出可注释）
+# reportlab>=4.2.0
+# Pillow>=10.4.0

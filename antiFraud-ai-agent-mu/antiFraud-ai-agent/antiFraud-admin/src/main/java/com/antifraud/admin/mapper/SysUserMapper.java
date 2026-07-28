@@ -19,6 +19,8 @@ public interface SysUserMapper {
 
     int updateUser(SysUser user);
 
+    int updateUserProfile(SysUser user);
+
     int deleteUserById(Long id);
 
     int updateLastLoginTime(@Param("id") Long id);

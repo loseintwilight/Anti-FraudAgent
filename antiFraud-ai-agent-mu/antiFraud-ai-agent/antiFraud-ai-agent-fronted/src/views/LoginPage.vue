@@ -23,12 +23,12 @@ const loading = ref(false)
 const captchaImg = ref('')
 const captchaUuid = ref('')
 
-const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8123/api'
+const API_BASE = '/admin-api/api'
 
 async function loadCaptcha() {
   try {
     const res = await fetch(`${API_BASE}/v1/auth/captchaImage`).then(r => r.json())
-    if (res.success) {
+    if (res.code === 200) {
       captchaImg.value = res.img
       captchaUuid.value = res.uuid
     }
@@ -77,12 +77,25 @@ function handleLogin() {
   })
     .then((res) => res.json())
     .then((data) => {
-      if (data.success) {
-        localStorage.setItem('auth_token', data.token)
-        localStorage.setItem('auth_user', data.user.username)
+      if (data.code === 200) {
+        const loginData = data.data
+        localStorage.setItem('auth_token', loginData.token)
+        localStorage.setItem('auth_user', loginData.user ? loginData.user.username : form.value.username.trim())
+        // 保存用户信息到 localStorage
+        localStorage.setItem('antiFraud-user-info', JSON.stringify({
+          nickname: loginData.nickname || loginData.user?.username || '用户',
+          role: loginData.fraudRole || 'youth',
+          roleLabel: '青年',
+          roleIcon: '',
+          loginTime: new Date().toLocaleString('zh-CN'),
+        }))
+        // 保存用户ID
+        if (loginData.user && loginData.user.id) {
+          localStorage.setItem('auth_user_id', String(loginData.user.id))
+        }
         router.push('/fraud')
       } else {
-        errorMsg.value = data.message || '登录失败'
+        errorMsg.value = data.msg || '登录失败'
         loadCaptcha()
       }
     })
