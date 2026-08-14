@@ -15,6 +15,8 @@ from langchain_dashscope import ChatDashScope
 
 from app.llm.chat_memory import FileChatMemory
 from app.llm.config import LLMConfig
+from app.llm.reflection import reflection_engine
+from app.llm.memory import memory_manager
 from app.llm.tools import get_all_tools
 
 logger = logging.getLogger(__name__)
@@ -426,6 +428,127 @@ class ChatAgent:
     def clear_memory(self, conversation_id: str) -> None:
         """清除指定对话的历史"""
         self.memory.clear(conversation_id)
+
+    # ========== 带反思的对话 ==========
+
+    def chat_with_reflection(
+        self,
+        message: str,
+        conversation_id: str = "default",
+        user_id: str = None,
+        enable_reflection: bool = True,
+    ) -> str:
+        """
+        带反思机制的对话
+        1. 先调用基础对话获取输出
+        2. 反思输出：检查事实错误、意图误判、风险不当
+        3. 如有问题，修正后返回
+
+        参数:
+            message: 用户消息
+            conversation_id: 对话ID
+            user_id: 用户ID（用于记录风险交互）
+            enable_reflection: 是否启用反思
+        """
+        # 1. 基础对话
+        response = self.chat(message, conversation_id)
+
+        # 2. 反思检查
+        if not enable_reflection:
+            return response
+
+        try:
+            # 意图判定
+            intent = self._detect_intent(message)
+
+            # 反思
+            reflection = reflection_engine.reflect(
+                user_message=message,
+                agent_output=response,
+                intent=intent,
+                context="",
+            )
+
+            if reflection.get("has_issues"):
+                logger.warning(f"反思发现问题: {reflection.get('issue_type')}")
+
+                # 修正
+                correction = reflection.get("correction", "")
+                if correction:
+                    logger.info(f"反思修正: 原输出[{len(response)}字] -> 修正后[{len(correction)}字]")
+                    # 更新 AI 回复（替换最后一条 AI 消息）
+                    self.memory.add_message(conversation_id, AIMessage(content=correction))
+                    return correction
+
+        except Exception as e:
+            logger.error(f"反思机制异常: {e}，返回原始输出")
+
+        # 3. 记录到长期记忆
+        if user_id and intent == "反诈预警":
+            try:
+                # 简单的风险等级判定
+                risk_level = "mid"
+                if any(kw in message for kw in ["转账", "汇款", "安全账户", "冻结", "通缉令"]):
+                    risk_level = "critical"
+                elif any(kw in message for kw in ["投资", "刷单", "验证码", "贷款", "杀猪盘"]):
+                    risk_level = "high"
+
+                memory_manager.add_detection_record(
+                    user_id=user_id,
+                    fraud_type=self._detect_fraud_type(message),
+                    risk_level=risk_level,
+                    risk_score=0.7 if risk_level == "high" else (0.9 if risk_level == "critical" else 0.5),
+                    summary=message[:100],
+                )
+            except Exception as e:
+                logger.error(f"记录检测历史失败: {e}")
+
+        return response
+
+    def _detect_intent(self, message: str) -> str:
+        """检测用户意图"""
+        msg = message.strip().lower()
+
+        # 反诈预警关键词
+        warning_keywords = [
+            "我收到", "有人让我", "接到电话", "有人打电话", "有人加我",
+            "有人拉我", "网上认识", "老板让我", "有人让我转", "我投了",
+            "有人让下载", "收到短信", "网上有", "有人冒充", "我遇到了",
+            "被骗了", "转账", "安全账户", "平台打不开", "有人找",
+            "有人用AI", "收到AI",
+        ]
+        if any(kw in msg for kw in warning_keywords):
+            return "反诈预警"
+
+        # 咨询关键词
+        consultation_keywords = [
+            "什么是", "有哪些", "怎么判断", "为什么", "会不会", "能否",
+            "是否", "如何", "多少钱", "立案", "犯罪", "法律", "特征",
+            "手段", "套路", "识别", "96110", "反诈APP",
+        ]
+        if any(kw in msg for kw in consultation_keywords):
+            return "咨询"
+
+        return "闲聊"
+
+    def _detect_fraud_type(self, message: str) -> str:
+        """检测诈骗类型"""
+        msg = message.strip()
+        if any(kw in msg for kw in ["刷单", "返佣金", "做任务", "点赞赚钱"]):
+            return "刷单返利"
+        if any(kw in msg for kw in ["投资", "日收益", "年化", "保本", "稳赚", "炒股", "理财"]):
+            return "虚假投资"
+        if any(kw in msg for kw in ["公安局", "检察院", "法院", "涉嫌", "洗钱", "通缉令", "安全账户"]):
+            return "冒充公检法"
+        if any(kw in msg for kw in ["网恋", "交往", "一见钟情", "网恋对象", "网恋男友", "网恋女友"]):
+            return "杀猪盘"
+        if any(kw in msg for kw in ["快递", "退款", "客服", "订单", "退货", "运费"]):
+            return "客服退款"
+        if any(kw in msg for kw in ["贷款", "无抵押", "利息低", "手续费", "解冻", "放款"]):
+            return "虚假贷款"
+        if any(kw in msg for kw in ["AI换脸", "AI拟声", "AI合成", "AI语音"]):
+            return "AI合成诈骗"
+        return "疑似诈骗"
 
     # ========== 获取统计信息 ==========
 
