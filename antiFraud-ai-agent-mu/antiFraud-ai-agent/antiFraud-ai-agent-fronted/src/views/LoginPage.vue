@@ -28,9 +28,14 @@ const API_BASE = '/admin-api/api'
 async function loadCaptcha() {
   try {
     const res = await fetch(`${API_BASE}/v1/auth/captchaImage`).then(r => r.json())
+    console.log('[captcha] response:', res)
     if (res.code === 200) {
-      captchaImg.value = res.img
-      captchaUuid.value = res.uuid
+      // 后端返回的 img 字段已包含 data:image/png;base64, 前缀
+      captchaImg.value = res.data?.img || res.img
+      captchaUuid.value = res.data?.uuid || res.uuid
+      console.log('[captcha] loaded:', { uuid: captchaUuid.value, imgLen: captchaImg.value?.length })
+    } else {
+      console.error('[captcha] failed:', res.msg)
     }
   } catch (e) {
     console.error('加载验证码失败:', e)

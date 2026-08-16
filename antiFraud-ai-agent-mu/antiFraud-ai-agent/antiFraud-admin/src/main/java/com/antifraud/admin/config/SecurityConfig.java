@@ -53,11 +53,17 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 登录接口不需要认证
                 .requestMatchers("/api/v1/auth/login").permitAll()
+                // 验证码接口不需要认证
+                .requestMatchers("/api/v1/auth/captchaImage").permitAll()
+                // 注册接口不需要认证
+                .requestMatchers("/api/v1/auth/register").permitAll()
                 // Swagger / Knife4j 接口不需要认证
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/doc.html").permitAll()
                 // 健康检查
                 .requestMatchers("/api/v1/health").permitAll()
-                // 其他所有请求需要认证
+                // 静态资源
+                .requestMatchers("/favicon.ico", "/favicon.jpg", "/static/**", "/*.html").permitAll()
+                // 其他所有请求需要认证（包括 /api/v1/auth/logout、/api/v1/auth/userinfo）
                 .anyRequest().authenticated()
             )
             // 添加 JWT 过滤器

@@ -213,6 +213,37 @@ function closeUserProfile() {
   showUserProfile.value = false
 }
 
+// 退出登录
+async function handleLogout() {
+  if (!confirm('确定要退出登录吗？')) return
+
+  const token = localStorage.getItem('auth_token')
+  if (token) {
+    try {
+      // 调用后端 logout 接口（best-effort，失败也继续本地清理）
+      await fetch('/admin-api/api/v1/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      }).catch(() => {})
+    } catch (e) {
+      console.warn('调用 logout 接口失败:', e)
+    }
+  }
+
+  // 清理本地存储
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('auth_user')
+  localStorage.removeItem('auth_user_id')
+  localStorage.removeItem('antiFraud-user-info')
+
+  // 跳转到登录页
+  if (typeof window !== 'undefined' && window.location) {
+    window.location.href = '/login'
+  }
+}
+
 // ==================== 场景化角色系统 ====================
 // 场景类型：chat(闲聊), knowledge(科普), risk_detect(风险检测)
 const currentScene = ref('chat')
@@ -2374,12 +2405,21 @@ onUnmounted(() => {
         </div>
       </div>
       <!-- 用户信息底部 -->
-      <div class="sidebar-user" @click="openUserProfile">
-        <UserAvatar size="sm" />
-        <div class="sidebar-user-info">
-          <span class="sidebar-user-name">{{ userInfo.nickname }}</span>
-          <span class="sidebar-user-role">{{ userInfo.roleLabel }}</span>
+      <div class="sidebar-user">
+        <div class="sidebar-user-main" @click="openUserProfile">
+          <UserAvatar size="sm" />
+          <div class="sidebar-user-info">
+            <span class="sidebar-user-name">{{ userInfo.nickname }}</span>
+            <span class="sidebar-user-role">{{ userInfo.roleLabel }}</span>
+          </div>
         </div>
+        <button class="sidebar-user-logout" @click.stop="handleLogout" title="退出登录" aria-label="退出登录">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
       </div>
     </aside>
 
@@ -2996,16 +3036,26 @@ onUnmounted(() => {
 .sidebar-user {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.65rem 0.9rem;
+  gap: 0.4rem;
+  padding: 0.65rem 0.6rem 0.65rem 0.9rem;
   border-top: 1px solid rgba(74, 144, 217, 0.08);
-  cursor: pointer;
   transition: background 0.2s;
   flex-shrink: 0;
 }
 
 .sidebar-user:hover {
   background: rgba(74, 144, 217, 0.04);
+}
+
+.sidebar-user-main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 2px 0;
 }
 
 .sidebar-user-info {
@@ -3030,6 +3080,34 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sidebar-user-logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #8a9bb5;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.sidebar-user-logout:hover {
+  background: rgba(245, 108, 108, 0.1);
+  color: #f56c6c;
+}
+
+.sidebar-user-logout:active {
+  transform: scale(0.92);
+}
+
+.sidebar-user-logout svg {
+  display: block;
 }
 
 /* ==================== 主聊天区域 ==================== */
