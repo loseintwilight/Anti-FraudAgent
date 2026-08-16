@@ -84,6 +84,10 @@ public class SysUser extends BaseEntity
     })
     private SysDept dept;
 
+    /** 反诈角色 */
+    @Excel(name = "反诈角色", readConverterExp = "accountant=财务人员,worker=务工人员,elderly=老年人,youth=中青年,child=未成年人")
+    private String fraudRole;
+
     /** 角色对象 */
     private List<SysRole> roles;
 
@@ -197,6 +201,16 @@ public class SysUser extends BaseEntity
     public void setAvatar(String avatar)
     {
         this.avatar = avatar;
+    }
+
+    public String getFraudRole()
+    {
+        return fraudRole;
+    }
+
+    public void setFraudRole(String fraudRole)
+    {
+        this.fraudRole = fraudRole;
     }
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
