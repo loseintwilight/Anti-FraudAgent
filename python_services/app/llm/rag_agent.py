@@ -22,6 +22,7 @@ from langchain_dashscope import DashScopeEmbeddings, ChatDashScope
 
 from app.llm.config import LLMConfig
 from app.llm.chat_memory import FileChatMemory
+from app.llm.memory import memory_manager as kb_memory_manager
 
 logger = logging.getLogger(__name__)
 
@@ -123,13 +124,28 @@ class RAGAgent:
             logger.warning(f"查询重写失败: {e}，使用原始查询")
             return question
 
-    def add_documents(self, documents: List[Dict[str, Any]]) -> int:
-        """添加文档到向量存储"""
+    def add_documents(self, documents: List[Dict[str, Any]], safe_mode: bool = True) -> int:
+        """添加文档到向量存储（支持安全模式：备份+回归测试+自动回滚）"""
         if self.vector_store is None:
             logger.warning("向量存储不可用，无法添加文档")
             return 0
 
         try:
+            # 安全模式：更新前备份
+            backup_path = ""
+            if safe_mode:
+                try:
+                    from evaluation.kb_version_manager import KnowledgeBaseManager
+                    kb_mgr = KnowledgeBaseManager()
+                    before_result = kb_mgr.run_regression_test()
+                    before_recall = before_result["avg_recall"]
+                    backup_path = kb_mgr.backup_vector_store()
+                    logger.info(
+                        f"安全模式: 更新前召回率={before_recall:.2%}, 备份={backup_path}"
+                    )
+                except Exception as e:
+                    logger.warning(f"备份失败，跳过安全模式: {e}")
+
             docs = []
             for doc in documents:
                 docs.append(Document(
@@ -147,6 +163,34 @@ class RAGAgent:
             # 添加到向量存储
             self.vector_store.add_documents(split_docs)
             logger.info(f"成功添加 {len(split_docs)} 个文档块到向量存储")
+
+            # 安全模式：更新后回归测试
+            if safe_mode and backup_path:
+                try:
+                    from evaluation.kb_version_manager import KnowledgeBaseManager
+                    kb_mgr = KnowledgeBaseManager()
+                    after_result = kb_mgr.run_regression_test()
+                    after_recall = after_result["avg_recall"]
+
+                    recall_decline = before_recall - after_recall
+                    threshold = 0.15  # 召回率下降超过15%时回滚
+
+                    if recall_decline > threshold:
+                        logger.error(
+                            f"召回率下降 {recall_decline:.2%} > 阈值 {threshold:.2%}，自动回滚！"
+                        )
+                        kb_mgr.restore_vector_store(backup_path)
+                        # 重置向量存储引用
+                        self._vector_store = None
+                        logger.warning("已回滚到更新前版本")
+                        return 0
+                    else:
+                        logger.info(
+                            f"回归测试通过: 召回率 {before_recall:.2%} → {after_recall:.2%}"
+                        )
+                except Exception as e:
+                    logger.warning(f"回归测试失败: {e}")
+
             return len(split_docs)
 
         except Exception as e:
