@@ -3,8 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
+    "predev": "node ../../../setup-favicon.js",
     "dev": "vite",
+    "prebuild": "node ../../../setup-favicon.js",
     "build": "vite build",
+    "setup-favicon": "node ../../../setup-favicon.js",
     "preview": "vite preview"
   },
   "dependencies": {

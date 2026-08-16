@@ -22,7 +22,7 @@ onMounted(() => {
   const img = new Image()
   img.onload = () => { imgLoaded.value = true }
   img.onerror = () => { imgError.value = true }
-  img.src = '/src/assets/ai-avatar.jpg'
+  img.src = '/src/assets/load.jpg'
 })
 </script>
 
@@ -37,7 +37,7 @@ onMounted(() => {
     <template v-if="variant === 'fraud'">
       <img
         v-if="!imgError"
-        src="/src/assets/ai-avatar.jpg"
+        src="/src/assets/load.jpg"
         alt="反诈卫士"
         class="avatar-img"
         :class="{ 'avatar-img--loaded': imgLoaded }"
