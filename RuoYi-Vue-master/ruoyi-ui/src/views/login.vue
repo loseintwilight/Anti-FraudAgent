@@ -75,8 +75,8 @@ export default {
       footerContent: defaultSettings.footerContent,
       codeUrl: "",
       loginForm: {
-        username: "admin",
-        password: "***REMOVED***",
+        username: "",
+        password: "",
         rememberMe: false,
         code: "",
         uuid: ""

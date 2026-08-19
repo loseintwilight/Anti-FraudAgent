@@ -7,8 +7,8 @@ spring:
             # 主库数据源
             master:
                 url: jdbc:mysql://localhost:3306/anti_fraud?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
-                username: root
-                password: ***REMOVED***
+                username: ${DB_USERNAME:root}
+                password: ${DB_PASSWORD:changeme}
             # 从库数据源
             slave:
                 # 从数据源开关/默认关闭
@@ -47,8 +47,8 @@ spring:
                 allow:
                 url-pattern: /druid/*
                 # 控制台管理用户名和密码
-                login-username: ruoyi
-                login-password: ***REMOVED***
+                login-username: ${DRUID_USERNAME:admin}
+                login-password: ${DRUID_PASSWORD:changeme}
             filter:
                 stat:
                     enabled: true

@@ -4,8 +4,8 @@ spring:
     type: com.zaxxer.hikari.HikariDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/anti_fraud?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password: ***REMOVED***
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:changeme}
     hikari:
       minimum-idle: 5
       maximum-pool-size: 20
