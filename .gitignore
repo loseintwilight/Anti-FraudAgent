@@ -51,11 +51,13 @@ chat-memory/*.kryo
 Thumbs.db
 desktop.ini
 
-# ========== 文档（仅保留 README.md） ==========
-# 排除所有 .md 文件，但保留 README.md
+# ========== 文档（仅保留 antiFraud-ai-agent 的 README.md） ==========
+# 排除所有 .md 文件，仅保留指定 README.md
 *.md
-!README.md
-!**/README.md
+!antiFraud-ai-agent-mu/antiFraud-ai-agent/README.md
+
+# ========== RuoYi-Vue-master（不提交） ==========
+RuoYi-Vue-master/
 
 # ========== Skill 文件夹 ==========
 taste-skill-main/
