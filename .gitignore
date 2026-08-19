@@ -51,6 +51,19 @@ chat-memory/*.kryo
 Thumbs.db
 desktop.ini
 
+# ========== 文档（仅保留 README.md） ==========
+# 排除所有 .md 文件，但保留 README.md
+*.md
+!README.md
+!**/README.md
+
+# ========== Skill 文件夹 ==========
+taste-skill-main/
+
+# ========== 项目改善方案（不提交） ==========
+项目改善方案.md
+反诈项目介绍-最终版.md
+
 # ========== 其他 ==========
 .mvn/wrapper/maven-wrapper.jar
 HELP.md
