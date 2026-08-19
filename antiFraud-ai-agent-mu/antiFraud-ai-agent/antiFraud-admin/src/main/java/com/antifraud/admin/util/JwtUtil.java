@@ -22,7 +22,7 @@ public class JwtUtil {
     private final String tokenPrefix;
 
     public JwtUtil(
-            @Value("${jwt.secret:***REMOVED***}") String secret,
+            @Value("${jwt.secret:please-set-admin-jwt-secret-in-env}") String secret,
             @Value("${jwt.expiration:86400000}") long expirationMs,
             @Value("${jwt.token-prefix:Bearer }") String tokenPrefix) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
