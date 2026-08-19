@@ -1,0 +1,56 @@
+# ========== 敏感文件 ==========
+.env
+.env.*
+*-local.yml
+*-local.yaml
+*-local.properties
+application-local.yml
+application-prod.yml
+
+# ========== Java / Maven ==========
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# ========== Node.js / 前端 ==========
+node_modules/
+dist/
+.npm
+.pnpm-store/
+
+# ========== IDE ==========
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*.swo
+*~
+
+# ========== 构建产物 ==========
+build/
+out/
+/bin/
+
+# ========== 日志和临时文件 ==========
+*.log
+*.tmp
+*.bak
+cp.txt
+
+# ========== 运行时缓存 ==========
+chat-memory/*.kryo
+
+# ========== 操作系统文件 ==========
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========== 其他 ==========
+.mvn/wrapper/maven-wrapper.jar
+HELP.md
