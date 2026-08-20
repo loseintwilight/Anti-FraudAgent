@@ -1,0 +1,86 @@
+{
+  "test_set": "跨图识别评测集",
+  "description": "多张图片 + 文字混合输入，测试跨图关联识别能力",
+  "total_samples": 60,
+  "target_accuracy": 89.0,
+  "samples": [
+    {
+      "id": "cross_001",
+      "text": "我网上认识一个人，他说他是投资顾问，给我发了这些截图，让我投资5万",
+      "images": ["聊天截图_投资推荐.jpg", "收益截图.jpg", "身份证照片.jpg"],
+      "expected": {"is_fraud": true, "fraud_type": "虚假投资", "cross_correlation": true}
+    },
+    {
+      "id": "cross_002",
+      "text": "我收到公安局的电话，说我涉嫌洗钱，这是他们发给我的文件",
+      "images": ["通缉令图片.jpg", "警官证.jpg", "银行账户冻结通知.jpg"],
+      "expected": {"is_fraud": true, "fraud_type": "冒充公检法", "cross_correlation": true}
+    },
+    {
+      "id": "cross_003",
+      "text": "有人让我做刷单任务，给我看了这些截图说能赚钱",
+      "images": ["刷单任务截图.jpg", "返利到账截图.jpg", "群聊截图.jpg"],
+      "expected": {"is_fraud": true, "fraud_type": "刷单返利", "cross_correlation": true}
+    },
+    {
+      "id": "cross_004",
+      "text": "网恋对象给我发了这些照片，说要带我做投资",
+      "images": ["生活照.jpg", "投资收益截图.jpg", "聊天记录截图.jpg"],
+      "expected": {"is_fraud": true, "fraud_type": "杀猪盘", "cross_correlation": true}
+    },
+    {
+      "id": "cross_005",
+      "text": "我收到快递破损的短信，让我加客服微信退款",
+      "images": ["快递短信截图.jpg", "客服聊天截图.jpg", "退款链接截图.jpg"],
+      "expected": {"is_fraud": true, "fraud_type": "客服退款", "cross_correlation": true}
+    },
+    {
+      "id": "cross_006",
+      "text": "有人给我发了一个贷款链接，说无抵押秒到账",
+      "images": ["贷款广告截图.jpg", "额度审批截图.jpg", "手续费通知截图.jpg"],
+      "expected": {"is_fraud": true, "fraud_type": "虚假贷款", "cross_correlation": true}
+    },
+    {
+      "id": "cross_007",
+      "text": "我朋友发了一张AI换脸的视频截图给我，说是老板让我转账",
+      "images": ["AI换脸视频截图.jpg", "转账指令截图.jpg", "老板微信头像.jpg"],
+      "expected": {"is_fraud": true, "fraud_type": "AI合成诈骗", "cross_correlation": true}
+    },
+    {
+      "id": "cross_008",
+      "text": "我在网上看到这个兼职招聘，加了HR微信后发了这些",
+      "images": ["招聘海报.jpg", "HR聊天截图.jpg", "入职流程截图.jpg"],
+      "expected": {"is_fraud": true, "fraud_type": "刷单返利", "cross_correlation": true}
+    },
+    {
+      "id": "cross_009",
+      "text": "我父亲收到一个电话，说他的社保卡被冻结了，加了微信后发了这些",
+      "images": ["社保局通知.jpg", "工作人员微信截图.jpg", "转账二维码.jpg"],
+      "expected": {"is_fraud": true, "fraud_type": "冒充公检法", "cross_correlation": true}
+    },
+    {
+      "id": "cross_010",
+      "text": "我在二手平台卖东西，买家说付款失败让我扫码认证",
+      "images": ["买家消息截图.jpg", "付款失败截图.jpg", "认证二维码.jpg"],
+      "expected": {"is_fraud": true, "fraud_type": "客服退款", "cross_correlation": true}
+    },
+    {
+      "id": "cross_011",
+      "text": "正常的网购截图，确认收货和评价",
+      "images": ["订单详情.jpg", "物流信息.jpg"],
+      "expected": {"is_fraud": false, "fraud_type": "", "cross_correlation": false}
+    },
+    {
+      "id": "cross_012",
+      "text": "家庭群聊分享的旅游照片",
+      "images": ["旅游风景.jpg", "家庭合影.jpg", "美食照片.jpg"],
+      "expected": {"is_fraud": false, "fraud_type": "", "cross_correlation": false}
+    }
+  ],
+  "positive_samples": 10,
+  "negative_samples": 2,
+  "metrics": {
+    "definition": "跨图识别准确率 = 正确识别跨图关联的样本数 / 总样本数",
+    "target": "89%"
+  }
+}

@@ -58,7 +58,7 @@ desktop.ini
 # 排除所有 .md 文件，仅保留指定的 README.md
 *.md
 !README.md
-!antiFraud-ai-agent-mu/antiFraud-ai-agent/README.md
+!antiFraud-ai-agent-main/antiFraud-ai-agent/README.md
 
 # ========== RuoYi-Vue-master（不提交） ==========
 RuoYi-Vue-master/
@@ -72,6 +72,16 @@ taste-skill-main/
 
 # ========== 数据库文件（不提交） ==========
 database/
+
+# ========== 内部资料（不提交） ==========
+别传git这个是内部资料/
+
+# ========== 临时文件 ==========
+tmp/
+
+# ========== HTTP 测试数据（不提交） ==========
+python_services/false/
+python_services/logs/
 
 # ========== 其他 ==========
 .mvn/wrapper/maven-wrapper.jar

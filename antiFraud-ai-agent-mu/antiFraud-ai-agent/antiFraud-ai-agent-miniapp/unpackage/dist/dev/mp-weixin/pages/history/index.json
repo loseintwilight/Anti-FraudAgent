@@ -1,7 +1,0 @@
-{
-  "navigationBarTitleText": "检测历史",
-  "enablePullDownRefresh": true,
-  "usingComponents": {
-    "risk-badge": "../../components/risk-badge/risk-badge"
-  }
-}
