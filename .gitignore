@@ -32,6 +32,9 @@ dist/
 *.swo
 *~
 
+# ========== Skill 配置 ==========
+.taste-skill.json
+
 # ========== 构建产物 ==========
 build/
 out/
