@@ -44,16 +44,17 @@ out/
 cp.txt
 
 # ========== 运行时缓存 ==========
-chat-memory/*.kryo
+chat-memory/
 
 # ========== 操作系统文件 ==========
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ========== 文档（仅保留 antiFraud-ai-agent 的 README.md） ==========
-# 排除所有 .md 文件，仅保留指定 README.md
+# ========== 文档（仅保留 README.md） ==========
+# 排除所有 .md 文件，仅保留指定的 README.md
 *.md
+!README.md
 !antiFraud-ai-agent-mu/antiFraud-ai-agent/README.md
 
 # ========== RuoYi-Vue-master（不提交） ==========
@@ -65,6 +66,9 @@ taste-skill-main/
 # ========== 项目改善方案（不提交） ==========
 项目改善方案.md
 反诈项目介绍-最终版.md
+
+# ========== 数据库文件（不提交） ==========
+database/
 
 # ========== 其他 ==========
 .mvn/wrapper/maven-wrapper.jar
