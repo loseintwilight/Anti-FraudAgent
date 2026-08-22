@@ -48,6 +48,9 @@ cp.txt
 
 # ========== 运行时缓存 ==========
 chat-memory/
+__pycache__/
+*.pyc
+*.pyo
 
 # ========== 操作系统文件 ==========
 .DS_Store
@@ -66,9 +69,10 @@ RuoYi-Vue-master/
 # ========== Skill 文件夹 ==========
 taste-skill-main/
 
-# ========== 项目改善方案（不提交） ==========
-项目改善方案.md
+# ========== 项目升级方案（不提交） ==========
+AI反诈项目优化升级方案.md
 反诈项目介绍-最终版.md
+PRD.md
 
 # ========== 数据库文件（不提交） ==========
 database/
@@ -86,3 +90,9 @@ python_services/logs/
 # ========== 其他 ==========
 .mvn/wrapper/maven-wrapper.jar
 HELP.md
+
+# ========== 根目录冗余图片（不提交） ==========
+/20250709163601.jpg
+/load.jpg
+/setup-favicon.js
+/_verify_mvn.txt
