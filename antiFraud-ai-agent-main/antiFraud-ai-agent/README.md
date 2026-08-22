@@ -7,7 +7,7 @@
 2. 启动 Python 微服务：cd ../../python_services && uvicorn app.main:app --port 8501
 3. 启动 Java 主后端：cd antiFraud-ai-agent && mvn spring-boot:run       → 端口 8123
 4. 启动 Admin 后端：cd antiFraud-admin && mvn spring-boot:run            → 端口 8080
-5. 启动 Admin 前端：cd antiFraud-ai-agent-admin-v2 && npm run dev        → 端口 5174
+5. 启动 Admin 前端：cd antiFraud-ai-agent-admin-fronted && npm run dev  → 端口 5174
 6. 启动 Web 前端：cd antiFraud-ai-agent-fronted && npm run dev           → 端口 5173
 ```
 

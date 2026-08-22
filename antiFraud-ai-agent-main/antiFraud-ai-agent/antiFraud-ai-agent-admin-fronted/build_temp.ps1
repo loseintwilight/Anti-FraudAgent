@@ -1,4 +1,4 @@
-$projectDir = "d:\Anti-FraudAgent\antiFraud-ai-agent-main\antiFraud-ai-agent\antiFraud-ai-agent-admin-v2"
+$projectDir = "d:\Anti-FraudAgent\antiFraud-ai-agent-main\antiFraud-ai-agent\antiFraud-ai-agent-admin-fronted"
 $env:CI = "true"
 $process = Start-Process -FilePath "node" -ArgumentList "`"$projectDir\node_modules\vite\bin\vite.js`"","build" -NoNewWindow -RedirectStandardOutput "$projectDir\build_stdout.txt" -RedirectStandardError "$projectDir\build_stderr.txt" -WorkingDirectory $projectDir -PassThru
 $process.WaitForExit(120000)
