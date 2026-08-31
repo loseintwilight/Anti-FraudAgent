@@ -75,3 +75,11 @@ SELECT 1, `menu_id` FROM `sys_menu` WHERE `menu_id` >= 2001;
 
 INSERT IGNORE INTO `sys_role_menu` (`role_id`, `menu_id`)
 SELECT 3, `menu_id` FROM `sys_menu` WHERE `menu_id` IN (2001, 2002, 2003, 2004, 2005, 2006, 2101, 2105, 2109, 2113);
+
+-- ============================================================
+-- 6. 初始化结果校验
+-- ============================================================
+SELECT `menu_id`, `menu_name`, `parent_id`, `perms`
+FROM `sys_menu`
+WHERE `menu_id` >= 2001
+ORDER BY `menu_id`;
