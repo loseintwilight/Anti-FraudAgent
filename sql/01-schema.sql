@@ -98,3 +98,22 @@ CREATE TABLE IF NOT EXISTS `report_record` (
     KEY `idx_user_id` (`user_id`),
     KEY `idx_report_type` (`report_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报告记录表';
+
+-- ============================================================
+-- 5. 黑名单表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `blacklist` (
+    `id`              BIGINT       NOT NULL AUTO_INCREMENT  COMMENT '记录ID',
+    `target_type`     VARCHAR(20)  NOT NULL                  COMMENT '类型：phone/account/wechat/url',
+    `target_value`    VARCHAR(200) NOT NULL                  COMMENT '具体值：手机号/账号/微信号/URL',
+    `source`          VARCHAR(50)  DEFAULT 'manual'          COMMENT '来源：manual/crawler/report',
+    `reason`          VARCHAR(500) DEFAULT NULL              COMMENT '拉黑原因',
+    `status`          TINYINT      NOT NULL DEFAULT 1        COMMENT '状态：0-已解除 1-生效中',
+    `operator`        VARCHAR(50)  DEFAULT NULL              COMMENT '操作人',
+    `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_target_type` (`target_type`),
+    KEY `idx_target_value` (`target_value`),
+    KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='黑名单表';
