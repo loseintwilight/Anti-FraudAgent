@@ -54,3 +54,13 @@ INSERT IGNORE INTO `sys_menu` (`menu_id`, `menu_name`, `parent_id`, `order_num`,
 -- ============================================================
 INSERT IGNORE INTO `sys_role` (`role_id`, `role_name`, `role_key`, `role_sort`, `data_scope`, `menu_check_strictly`, `dept_check_strictly`, `status`, `del_flag`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
 (3, '网格员', 'grid_member', 3, '1', 1, 1, '0', '0', 'admin', NOW(), '', NULL, '网格员角色');
+
+-- ============================================================
+-- 4. 可选：网格员演示账号
+--    邮箱 / 手机号为占位数据，请按实际情况替换
+--    密码哈希为 RuoYi 出厂默认值（明文 admin123），上线前务必修改
+-- ============================================================
+INSERT IGNORE INTO `sys_user` (`user_id`, `dept_id`, `user_name`, `nick_name`, `user_type`, `email`, `phonenumber`, `sex`, `avatar`, `password`, `status`, `del_flag`, `login_ip`, `login_date`, `pwd_update_date`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
+(3, 103, 'grid_user', '网格员', '00', 'grid@example.com', '13800000000', '0', '', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '', NOW(), NOW(), 'admin', NOW(), '', NULL, '网格员演示账号');
+
+INSERT IGNORE INTO `sys_user_role` (`user_id`, `role_id`) VALUES (3, 3);
