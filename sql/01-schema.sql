@@ -117,3 +117,40 @@ CREATE TABLE IF NOT EXISTS `blacklist` (
     KEY `idx_target_value` (`target_value`),
     KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='黑名单表';
+
+-- ============================================================
+-- 6. 为 RuoYi 的 sys_user 表添加 fraud_role 字段（不存在时才添加）
+--    说明：
+--      1) RuoYi 的 sys_user 已包含 nick_name 字段
+--      2) 使用存储过程实现"列不存在则添加"，兼容 MySQL 5.7 / 8.0 各版本
+--         （不使用 MySQL 8.0.29+ 才支持的 ADD COLUMN IF NOT EXISTS）
+-- ============================================================
+DROP PROCEDURE IF EXISTS add_fraud_role_column;
+DELIMITER //
+CREATE PROCEDURE add_fraud_role_column()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME   = 'sys_user'
+          AND COLUMN_NAME  = 'fraud_role'
+    ) THEN
+        ALTER TABLE `sys_user`
+            ADD COLUMN `fraud_role` VARCHAR(30) DEFAULT 'youth'
+                COMMENT '反诈用户角色：accountant/worker/elderly/youth/child'
+                AFTER `nick_name`;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME   = 'sys_user'
+          AND INDEX_NAME   = 'idx_fraud_role'
+    ) THEN
+        ALTER TABLE `sys_user` ADD INDEX `idx_fraud_role` (`fraud_role`);
+    END IF;
+END //
+DELIMITER ;
+
+CALL add_fraud_role_column();
+DROP PROCEDURE add_fraud_role_column;
