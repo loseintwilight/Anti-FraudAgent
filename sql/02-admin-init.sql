@@ -27,3 +27,24 @@ INSERT IGNORE INTO `sys_menu` (`menu_id`, `menu_name`, `parent_id`, `order_num`,
 
 INSERT IGNORE INTO `sys_menu` (`menu_id`, `menu_name`, `parent_id`, `order_num`, `path`, `component`, `query`, `route_name`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
 (2006, '仪表盘', 0, 0, 'dashboard', 'dashboard/index', '', 'dashboard', 1, 0, 'C', '0', '0', 'dashboard:view', 'dashboard', 'admin', NOW(), '', NULL, '仪表盘菜单');
+
+-- ============================================================
+-- 2. 按钮级权限（F 类型）
+-- ============================================================
+INSERT IGNORE INTO `sys_menu` (`menu_id`, `menu_name`, `parent_id`, `order_num`, `path`, `component`, `query`, `route_name`, `is_frame`, `is_cache`, `menu_type`, `visible`, `status`, `perms`, `icon`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
+(2101, '检测记录查询', 2002, 1, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:detection:query', '#', 'admin', NOW(), '', NULL, ''),
+(2102, '检测记录新增', 2002, 2, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:detection:add', '#', 'admin', NOW(), '', NULL, ''),
+(2103, '检测记录修改', 2002, 3, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:detection:edit', '#', 'admin', NOW(), '', NULL, ''),
+(2104, '检测记录删除', 2002, 4, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:detection:remove', '#', 'admin', NOW(), '', NULL, ''),
+(2105, '报告查询', 2003, 1, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:report:query', '#', 'admin', NOW(), '', NULL, ''),
+(2106, '报告新增', 2003, 2, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:report:add', '#', 'admin', NOW(), '', NULL, ''),
+(2107, '报告修改', 2003, 3, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:report:edit', '#', 'admin', NOW(), '', NULL, ''),
+(2108, '报告删除', 2003, 4, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:report:remove', '#', 'admin', NOW(), '', NULL, ''),
+(2109, '黑名单查询', 2004, 1, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:blacklist:query', '#', 'admin', NOW(), '', NULL, ''),
+(2110, '黑名单新增', 2004, 2, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:blacklist:add', '#', 'admin', NOW(), '', NULL, ''),
+(2111, '黑名单修改', 2004, 3, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:blacklist:edit', '#', 'admin', NOW(), '', NULL, ''),
+(2112, '黑名单删除', 2004, 4, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:blacklist:remove', '#', 'admin', NOW(), '', NULL, ''),
+(2113, '用户画像查询', 2005, 1, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:profile:query', '#', 'admin', NOW(), '', NULL, ''),
+(2114, '用户画像新增', 2005, 2, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:profile:add', '#', 'admin', NOW(), '', NULL, ''),
+(2115, '用户画像修改', 2005, 3, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:profile:edit', '#', 'admin', NOW(), '', NULL, ''),
+(2116, '用户画像删除', 2005, 4, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:profile:remove', '#', 'admin', NOW(), '', NULL, '');
