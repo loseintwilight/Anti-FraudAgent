@@ -83,3 +83,18 @@ CREATE TABLE IF NOT EXISTS `fraud_report` (
     KEY `idx_risk_level` (`risk_level`),
     KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='反诈报告表';
+
+-- ============================================================
+-- 4. 报告记录表（备用/扩展）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `report_record` (
+    `id`              BIGINT       NOT NULL AUTO_INCREMENT  COMMENT '记录ID',
+    `user_id`         VARCHAR(50)  NOT NULL                  COMMENT '用户ID',
+    `report_type`     VARCHAR(50)  DEFAULT 'risk'            COMMENT '报告类型',
+    `content`         TEXT         DEFAULT NULL              COMMENT '报告内容',
+    `file_path`       VARCHAR(500) DEFAULT NULL              COMMENT '文件路径',
+    `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_report_type` (`report_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报告记录表';
