@@ -39,3 +39,25 @@ CREATE TABLE IF NOT EXISTS `user_profile` (
     KEY `idx_user_id` (`user_id`),
     KEY `idx_risk_level` (`risk_level`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户画像表';
+
+-- ============================================================
+-- 2. 检测记录表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `detection_history` (
+    `id`              BIGINT       NOT NULL AUTO_INCREMENT  COMMENT '记录ID',
+    `user_id`         VARCHAR(50)  NOT NULL                  COMMENT '用户ID',
+    `input_type`      VARCHAR(20)  DEFAULT 'text'            COMMENT '输入类型：text/image/video',
+    `input_content`   TEXT         NOT NULL                  COMMENT '输入内容/文本',
+    `fraud_type`      VARCHAR(50)  DEFAULT NULL              COMMENT '诈骗类型',
+    `risk_score`      DOUBLE       DEFAULT 0.0               COMMENT '风险评分',
+    `risk_level`      VARCHAR(20)  DEFAULT 'unknown'         COMMENT '风险等级',
+    `confidence`      DOUBLE       DEFAULT 0.0               COMMENT '置信度',
+    `suggestion`      TEXT         DEFAULT NULL              COMMENT '建议',
+    `ai_response`     TEXT         DEFAULT NULL              COMMENT 'AI回复内容',
+    `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_fraud_type` (`fraud_type`),
+    KEY `idx_risk_level` (`risk_level`),
+    KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='检测记录表';
