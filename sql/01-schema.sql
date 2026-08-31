@@ -61,3 +61,25 @@ CREATE TABLE IF NOT EXISTS `detection_history` (
     KEY `idx_risk_level` (`risk_level`),
     KEY `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='检测记录表';
+
+-- ============================================================
+-- 3. 反诈报告表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `fraud_report` (
+    `id`              BIGINT       NOT NULL AUTO_INCREMENT  COMMENT '报告ID',
+    `user_id`         VARCHAR(50)  NOT NULL                  COMMENT '用户ID',
+    `title`           VARCHAR(200) DEFAULT NULL              COMMENT '报告标题',
+    `risk_level`      VARCHAR(20)  DEFAULT NULL              COMMENT '风险等级',
+    `risk_score`      DOUBLE       DEFAULT 0.0               COMMENT '风险评分',
+    `fraud_type`      VARCHAR(50)  DEFAULT NULL              COMMENT '诈骗类型',
+    `suggestions`     TEXT         DEFAULT NULL              COMMENT '建议列表（JSON数组）',
+    `report_content`  TEXT         DEFAULT NULL              COMMENT '报告详细内容',
+    `image_base64`    LONGTEXT     DEFAULT NULL              COMMENT '报告图片Base64',
+    `status`          VARCHAR(20)  DEFAULT 'pending'         COMMENT '状态：pending/completed/archived',
+    `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_risk_level` (`risk_level`),
+    KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='反诈报告表';
