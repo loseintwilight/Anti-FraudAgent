@@ -154,3 +154,12 @@ DELIMITER ;
 
 CALL add_fraud_role_column();
 DROP PROCEDURE add_fraud_role_column;
+
+-- ============================================================
+-- 初始化完成校验
+-- ============================================================
+SELECT TABLE_NAME, TABLE_COMMENT
+FROM information_schema.TABLES
+WHERE TABLE_SCHEMA = 'anti_fraud'
+  AND TABLE_NAME IN ('user_profile','detection_history','fraud_report','report_record','blacklist')
+ORDER BY TABLE_NAME;
