@@ -64,3 +64,14 @@ INSERT IGNORE INTO `sys_user` (`user_id`, `dept_id`, `user_name`, `nick_name`, `
 (3, 103, 'grid_user', '网格员', '00', 'grid@example.com', '13800000000', '0', '', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '', NOW(), NOW(), 'admin', NOW(), '', NULL, '网格员演示账号');
 
 INSERT IGNORE INTO `sys_user_role` (`user_id`, `role_id`) VALUES (3, 3);
+
+-- ============================================================
+-- 5. 角色 - 菜单关联
+--    超级管理员（role_id=1）：反诈管理全部权限
+--    网格员（role_id=3）：仅查看类权限
+-- ============================================================
+INSERT IGNORE INTO `sys_role_menu` (`role_id`, `menu_id`)
+SELECT 1, `menu_id` FROM `sys_menu` WHERE `menu_id` >= 2001;
+
+INSERT IGNORE INTO `sys_role_menu` (`role_id`, `menu_id`)
+SELECT 3, `menu_id` FROM `sys_menu` WHERE `menu_id` IN (2001, 2002, 2003, 2004, 2005, 2006, 2101, 2105, 2109, 2113);
