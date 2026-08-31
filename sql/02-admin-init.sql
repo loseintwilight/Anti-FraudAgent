@@ -48,3 +48,9 @@ INSERT IGNORE INTO `sys_menu` (`menu_id`, `menu_name`, `parent_id`, `order_num`,
 (2114, '用户画像新增', 2005, 2, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:profile:add', '#', 'admin', NOW(), '', NULL, ''),
 (2115, '用户画像修改', 2005, 3, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:profile:edit', '#', 'admin', NOW(), '', NULL, ''),
 (2116, '用户画像删除', 2005, 4, '', NULL, '', '', 1, 0, 'F', '0', '0', 'fraud:profile:remove', '#', 'admin', NOW(), '', NULL, '');
+
+-- ============================================================
+-- 3. 网格员角色（role_id=3，RuoYi 默认已占用 1=超级管理员 2=普通角色）
+-- ============================================================
+INSERT IGNORE INTO `sys_role` (`role_id`, `role_name`, `role_key`, `role_sort`, `data_scope`, `menu_check_strictly`, `dept_check_strictly`, `status`, `del_flag`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
+(3, '网格员', 'grid_member', 3, '1', 1, 1, '0', '0', 'admin', NOW(), '', NULL, '网格员角色');
