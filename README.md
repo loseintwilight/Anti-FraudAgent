@@ -393,3 +393,15 @@ A：`02-admin-init.sql` 未执行，或执行顺序在 RuoYi 脚本之前。菜�
 2. **设置强 JWT 密钥** —— 通过 `JWT_SECRET` 环境变量注入，勿使用默认值；
 3. **不要提交密钥文件** —— 仓库已通过 `.gitignore` 排除 `.env`、`application-local.yml` 等，请勿强制添加；
 4. **收紧 CORS 来源** —— Python 微服务当前为 `allow_origins=["*"]`，生产环境需按域名限制。
+
+---
+
+## 许可证与致谢
+
+本项目采用 [MIT License](LICENSE) 开源。
+
+- [RuoYi-Vue](https://gitee.com/y_project/RuoYi-Vue) —— 管理后台基于其架构改造（MIT License）
+- [LangChain](https://github.com/langchain-ai/langchain) —— AI 应用编排框架
+- [阿里云百炼](https://bailian.console.aliyun.com/) —— 大模型能力支持
+
+如本项目对你有帮助，欢迎点个 Star。
