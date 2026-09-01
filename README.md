@@ -138,3 +138,38 @@ graph TB
 **分工原则**：Java 负责主业务逻辑、认证与 API 编排；Python 承载 AI/ML 密集型任务（大模型推理、文本向量化、风险画像计算、报告渲染、爬虫调度）。两者通过 REST + JSON 通信。
 
 ---
+
+## 技术栈
+
+### 后端
+
+| 技术 | 版本 | 说明 |
+|------|------|------|
+| Spring Boot | 3.3.3 | Java 主框架 |
+| JDK | 17 | 运行环境 |
+| Python | 3.10 | AI 微服务 |
+| FastAPI | 0.100+ | Python Web 框架 |
+| LangChain | 0.3+ | AI 应用编排 |
+| MySQL | 8.0.24 | 业务数据存储 |
+| Redis | — | 缓存与会话 |
+| ChromaDB | 0.4+ | 向量存储 |
+| MyBatis | — | 管理端 ORM |
+
+### 前端
+
+| 端 | 技术 |
+|----|------|
+| C 端 Web | Vue 3 + Vite 4 + Vue Router |
+| 管理后台 | Vue 3 + Element Plus + ECharts + Vite |
+| 微信小程序 | uni-app |
+| 浏览器插件 | Chrome Extension Manifest V3 |
+
+### AI 模型（阿里云百炼 DashScope）
+
+| 模型 | 用途 |
+|------|------|
+| `qwen-plus` | 对话生成与推理 |
+| `qwen-vl-max` | 图片 / 视频理解与 OCR |
+| `text-embedding-v2` | 文本向量化 |
+
+---
