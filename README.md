@@ -173,3 +173,32 @@ graph TB
 | `text-embedding-v2` | 文本向量化 |
 
 ---
+
+## 目录结构
+
+```
+Anti-FraudAgent/
+├── sql/                              # 数据库初始化脚本
+│   ├── 01-schema.sql                 # 业务核心表
+│   └── 02-admin-init.sql             # 管理后台菜单与角色初始化
+├── python_services/                  # Python AI 微服务
+│   └── app/
+│       ├── api/                      # FastAPI 路由
+│       ├── risk_engine/              # 风险评分引擎
+│       ├── report/                   # 报告生成（PDF / 图片）
+│       ├── nlp/                      # 诈骗分类、劝导话术
+│       ├── vector_store/             # 向量化与检索
+│       ├── crawler/                  # 案例爬虫
+│       ├── notification/             # 通知推送
+│       └── metrics/                  # 指标统计
+└── antiFraud-ai-agent-main/
+    └── antiFraud-ai-agent/
+        ├── src/                      # Java 主后端（:8123 /api）
+        ├── antiFraud-admin/          # 管理端后端（:8081 /admin-api）
+        ├── antiFraud-ai-agent-fronted/       # C 端 Web 前端（:5173）
+        ├── antiFraud-ai-agent-admin-fronted/ # 管理后台前端（:5174）
+        ├── antiFraud-ai-agent-miniapp/       # 微信小程序（uni-app）
+        └── browser-plugin/           # 浏览器插件（MV3）
+```
+
+---
