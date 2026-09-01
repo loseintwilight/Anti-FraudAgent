@@ -97,3 +97,44 @@
 - **举报上报**：一键提交可疑信息，进入举报队列并关联历史举报
 
 ---
+
+## 系统架构
+
+```mermaid
+graph TB
+    subgraph 客户端
+        A1[Web 前端<br/>Vue 3]
+        A2[微信小程序<br/>uni-app]
+        A3[浏览器插件<br/>MV3]
+        A4[管理后台<br/>Vue 3 + Element Plus]
+    end
+
+    subgraph 服务端
+        B1[Java 后端<br/>Spring Boot 3.3<br/>:8123 /api]
+        B2[管理端后端<br/>RuoYi<br/>:8081 /admin-api]
+        B3[Python AI 微服务<br/>FastAPI + LangChain<br/>:8501]
+    end
+
+    subgraph 数据与模型
+        C1[(MySQL 8.0<br/>业务数据)]
+        C2[(Redis<br/>缓存与会话)]
+        C3[(ChromaDB<br/>向量库)]
+        C4[阿里云百炼 DashScope<br/>qwen-plus / qwen-vl-max]
+    end
+
+    A1 --> B1
+    A2 --> B1
+    A3 --> B1
+    A4 --> B2
+    A4 --> B1
+    B1 --> B3
+    B3 --> C4
+    B3 --> C3
+    B1 --> C1
+    B1 --> C2
+    B2 --> C1
+```
+
+**分工原则**：Java 负责主业务逻辑、认证与 API 编排；Python 承载 AI/ML 密集型任务（大模型推理、文本向量化、风险画像计算、报告渲染、爬虫调度）。两者通过 REST + JSON 通信。
+
+---
