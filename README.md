@@ -285,3 +285,21 @@ npm install && npm run dev
 | 管理后台前端 | 5174 | — |
 
 ---
+
+## 环境变量
+
+| 变量 | 服务 | 说明 | 默认值 |
+|------|------|------|--------|
+| `DASHSCOPE_API_KEY` | Python | 阿里云百炼 API Key（**必填**） | — |
+| `LLM_CHAT_MODEL` | Python | 对话模型 | `qwen-plus` |
+| `LLM_VISION_MODEL` | Python | 视觉模型 | `qwen-vl-max` |
+| `LLM_EMBEDDING_MODEL` | Python | 向量化模型 | `text-embedding-v2` |
+| `LLM_TEMPERATURE` | Python | 采样温度 | — |
+| `LLM_MAX_TOKENS` | Python | 最大生成长度 | — |
+| `DB_USERNAME` | Java | 数据库用户名 | `root` |
+| `DB_PASSWORD` | Java | 数据库密码 | `changeme` |
+| `JWT_SECRET` | Java | JWT 签名密钥（**生产必改**） | `changeme-...` |
+
+> **提示**：Python 侧优先读取 `DASHSCOPE_API_KEY`，未设置时回退读取 `DASH_SCOPE_API_KEY`（带下划线），两种写法均兼容。
+
+---
