@@ -349,3 +349,21 @@ GET  /health                    # 健康检查
 ```
 
 > 启动后可访问 Swagger 查看完整接口：`http://localhost:8123/api/swagger-ui.html`
+
+---
+
+## 常见问题
+
+**Q：启动时报 `Table 'anti_fraud.xxx' doesn't exist`？**
+
+A：未按顺序导入数据库脚本。项目关闭了 JPA 自动建表（`ddl-auto: none`），必须手动执行 `sql/` 下的脚本，详见[初始化数据库](#1-初始化数据库)。
+
+**Q：AI 接口返回鉴权失败？**
+
+A：确认 `.env` 中已填写 `DASHSCOPE_API_KEY`（代码同时兼容 `DASH_SCOPE_API_KEY` 写法），并确认该 Key 已开通百炼服务。
+
+**Q：管理后台菜单为空？**
+
+A：`02-admin-init.sql` 未执行，或执行顺序在 RuoYi 脚本之前。菜单 ID 从 2001 起，脚本使用 `INSERT IGNORE`，可重复执行而不会产生重复数据。
+
+---
