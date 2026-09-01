@@ -202,3 +202,86 @@ Anti-FraudAgent/
 ```
 
 ---
+
+## 快速开始
+
+### 环境要求
+
+- JDK 17+
+- Python 3.10+
+- Node.js 18+
+- Maven 3.6+
+- MySQL 8.0+
+- Redis
+
+### 1. 初始化数据库
+
+管理端基于 **RuoYi** 构建，因此需先导入 RuoYi 基础表，再导入本项目脚本：
+
+```bash
+# 顺序不可颠倒
+mysql -u root -p < ry_20260417.sql        # ① RuoYi 官方基础表
+mysql -u root -p < sql/01-schema.sql      # ② 本项目业务表
+mysql -u root -p < sql/02-admin-init.sql  # ③ 管理菜单与角色
+```
+
+> RuoYi 官方脚本获取：<https://gitee.com/y_project/RuoYi-Vue> 或 <https://github.com/yangzongzhuan/RuoYi-Vue>
+
+### 2. 配置环境变量
+
+**Python 微服务**（`python_services/.env`）：
+
+```env
+DASHSCOPE_API_KEY=your-dashscope-api-key
+```
+
+**Java 后端**（环境变量或 `application-local.yml`）：
+
+```bash
+export DB_USERNAME=root
+export DB_PASSWORD=your-password
+export JWT_SECRET=your-jwt-secret
+```
+
+### 3. 启动 Python AI 微服务
+
+```bash
+cd python_services
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8501
+```
+
+### 4. 启动 Java 后端
+
+```bash
+cd antiFraud-ai-agent-main/antiFraud-ai-agent
+mvn spring-boot:run
+```
+
+主后端监听 `http://localhost:8123/api`
+
+### 5. 启动前端
+
+```bash
+# C 端 Web（默认 :5173）
+cd antiFraud-ai-agent-main/antiFraud-ai-agent/antiFraud-ai-agent-fronted
+npm install && npm run dev
+
+# 管理后台（:5174）
+cd antiFraud-ai-agent-main/antiFraud-ai-agent/antiFraud-ai-agent-admin-fronted
+npm install && npm run dev
+```
+
+小程序与浏览器插件：用 HBuilderX / 微信开发者工具打开 `antiFraud-ai-agent-miniapp`；浏览器插件在 Chrome 开发者模式下"加载已解压的扩展程序"并选择 `browser-plugin` 目录。
+
+### 服务端口一览
+
+| 服务 | 端口 | 路径前缀 |
+|------|------|----------|
+| Java 主后端 | 8123 | `/api` |
+| 管理端后端 | 8081 | `/admin-api` |
+| Python AI 微服务 | 8501 | `/` |
+| C 端 Web 前端 | 5173 | — |
+| 管理后台前端 | 5174 | — |
+
+---
