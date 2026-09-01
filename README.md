@@ -303,3 +303,49 @@ npm install && npm run dev
 > **提示**：Python 侧优先读取 `DASHSCOPE_API_KEY`，未设置时回退读取 `DASH_SCOPE_API_KEY`（带下划线），两种写法均兼容。
 
 ---
+
+## API 接口
+
+基础路径：`http://localhost:8123/api`
+
+### AI 能力
+
+```
+POST /ai/love_app/chat/sync     # 同步对话
+POST /ai/love_app/chat/tools    # 带工具调用对话
+POST /ai/love_app/chat/report   # 报告生成对话
+POST /ai/love_app/clear         # 清空会话记忆
+POST /ai/vision/analyze         # 图片分析（OCR + 风险识别）
+POST /ai/check-video            # 视频分析（multipart）
+POST /ai/rag/chat               # RAG 知识库问答
+GET  /ai/stats                  # 统计信息
+```
+
+### 业务功能
+
+```
+GET    /history/list            # 检测历史列表
+POST   /history/favorite        # 收藏 / 取消收藏
+DELETE /history/{historyId}     # 删除记录
+
+POST   /persuasion/generate     # 生成劝阻话术
+
+POST   /report/submit           # 提交举报
+GET    /report/pdf/{reportId}   # 导出 PDF 报告
+GET    /report/image/{reportId} # 导出图片报告
+
+GET    /blacklist/list          # 黑名单列表
+POST   /blacklist/add           # 加入黑名单
+DELETE /blacklist/remove        # 移出黑名单
+```
+
+### 认证与健康检查
+
+```
+POST /v1/auth/login             # 登录
+POST /v1/auth/register          # 注册
+GET  /v1/auth/captchaImage      # 验证码
+GET  /health                    # 健康检查
+```
+
+> 启动后可访问 Swagger 查看完整接口：`http://localhost:8123/api/swagger-ui.html`
