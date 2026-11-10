@@ -312,7 +312,7 @@ npm install && npm run dev
 | `LLM_EMBEDDING_MODEL` | Python | 向量化模型 | `text-embedding-v2` |
 | `LLM_TEMPERATURE` | Python | 采样温度 | `0.7` |
 | `LLM_MAX_TOKENS` | Python | 最大生成长度 | `2048` |
-| `VECTOR_STORE_PATH` | Python | ChromaDB 持久化目录 | `python_services/chroma_db` |
+| `VECTOR_STORE_PATH` | Python | Qdrant 向量库持久化目录 | 见 `app/llm/config.py` |
 | `DB_USERNAME` | Java | 数据库用户名 | `root` |
 | `DB_PASSWORD` | Java | 数据库密码 | `changeme` |
 | `JWT_SECRET` | Java | JWT 签名密钥（**部署必改**） | `changeme-please-set-jwt-secret-in-env` |
