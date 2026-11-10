@@ -7,7 +7,7 @@
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-基于 **Spring Boot 3 + LangChain + 通义千问** 的多模态 AI 反诈智能体，支持文字 / 图片 / 视频风险识别、RAG 知识库问答、分级风险评估与 AI 劝阻话术生成。仓库内包含 Web、管理后台、微信小程序与浏览器插件四端示例代码，**各端完成度不一致，部分为演示占位**。
+基于 **Spring Boot 3 + LangChain + 通义千问** 的多模态 AI 反诈智能体，支持文字 / 图片 / 视频风险识别、RAG 知识库问答、分级风险评估与 AI 劝阻话术生成。仓库内包含 Web、管理后台、微信小程序与浏览器插件四端实现。
 
 > **版本说明**：本仓库是项目的**早期公开版本**，技术栈与配置以仓库内代码为准；AI 侧的检索与判定链路后续有过调整，README 可能未与迭代中的实现完全同步。
 >
