@@ -201,7 +201,7 @@ Anti-FraudAgent/
 │   │   ├── risk_engine/              # 风险评分引擎（rules/ 分人群规则、age_adaptive.py）
 │   │   ├── report/                   # 风险报告生成
 │   │   ├── nlp/                      # 诈骗分类、劝导话术
-│   │   ├── vector_store/             # 向量化与检索
+│   │   ├── vector_store/             # Qdrant 向量化与检索
 │   │   ├── crawler/                  # 案例爬虫（关键词过滤、站点解析器、调度器）
 │   │   ├── notification/             # 监护人预警与通知推送
 │   │   └── metrics/                  # 指标统计
