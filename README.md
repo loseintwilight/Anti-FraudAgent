@@ -30,6 +30,7 @@
 - [项目现状与边界](#项目现状与边界)
 - [项目背景](#项目背景)
 - [核心功能](#核心功能)
+- [已实现能力](#已实现能力)
 - [系统架构](#系统架构)
 - [技术栈](#技术栈)
 - [目录结构](#目录结构)
@@ -121,6 +122,23 @@
 - **历史记录**：检测记录留存、搜索筛选、收藏标记
 - **黑名单**：可疑号码 / 账号 / 网址标记
 - **举报上报**：一键提交可疑信息，进入举报队列并关联历史举报
+
+## 已实现能力（按仓库代码）
+
+上面的「核心功能」是用户视角的能力清单；下面这些模块在仓库里有对应实现，但不在那张清单里，容易被忽略。表内路径以 `python_services/` 为根目录。
+
+| 能力 | 代码位置 | 说明 |
+|---|---|---|
+| 反思机制 | `app/llm/reflection/engine.py`、`app/llm/chat_agent.py` | 对 Agent 输出做事实、意图、风险、合规、格式五项复查，与知识库上下文交叉验证；发现矛盾后给出修正建议并重写输出（`reflect_and_correct` 支持多轮修正），`chat_with_reflection` 为带反思的对话入口 |
+| 工具调用与容错 | `app/llm/tools.py`、`app/llm/tool_fault/` | 工具在服务端本地执行；`tool_fault/` 提供参数校验、失败容错与调用追踪 |
+| 长期记忆与用户画像 | `app/llm/memory/`、`app/llm/chat_memory.py` | 会话记忆与用户画像的读写 |
+| 监护人通知链路 | `app/notification/` | 链路已实现，但号码为演示值、通知只插入系统消息，**未接真实短信 / 电话通道** |
+| 知识采集与版本管理 | `app/crawler/`、`evaluation/kb_version_manager.py` | 关键词过滤、站点解析器（含公安部站点 `parsers/mps_gov.py`）、调度器、进度管理与知识库版本管理 |
+| 风险规则与年龄自适应 | `app/risk_engine/` | `scorer.py` 加权评分、`rules/` 分人群规则、`age_adaptive.py` 年龄调权 |
+| 意图识别与多模态 | `app/llm/` | `intent_classifier.py` 三模式意图识别、`multimodal_engine.py`、`ai_synthesis_detector.py`、`vision.py` |
+| 评测脚本 | `evaluation/` | RAG / 多模态 / 风险引擎 / 爬虫 / Agent / 记忆通知 / 指标报告 / 压力测试等脚本，`run_all.py` 为统一入口 |
+
+> **关于评测数据**：这些脚本用于本地对照验证，仓库内不含线上统计数据；`evaluation/agent_eval.py` 中部分正确率为构造的模拟样本，`app/metrics/tracker.py` 中的指标数值是**目标值**而非实测结果，请勿按线上指标理解。
 
 ---
 
