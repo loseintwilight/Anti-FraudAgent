@@ -99,8 +99,6 @@
 | 意图识别与多模态 | `app/llm/` | `intent_classifier.py` 三模式意图识别、`multimodal_engine.py`、`ai_synthesis_detector.py`、`vision.py` |
 | 评测脚本 | `evaluation/` | RAG / 多模态 / 风险引擎 / 爬虫 / Agent / 记忆通知 / 指标报告 / 压力测试等脚本，`run_all.py` 为统一入口 |
 
-> **关于评测数据**：这些脚本用于本地对照验证，仓库内不含线上统计数据；`evaluation/agent_eval.py` 中部分正确率为构造的模拟样本，`app/metrics/tracker.py` 中的指标数值是**目标值**而非实测结果，请勿按线上指标理解。
-
 ---
 
 ## 系统架构
