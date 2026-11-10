@@ -317,7 +317,7 @@ npm install && npm run dev
 | `DB_PASSWORD` | Java | 数据库密码 | `changeme` |
 | `JWT_SECRET` | Java | JWT 签名密钥（**部署必改**） | `changeme-please-set-jwt-secret-in-env` |
 
-> **提示**：Python 侧优先读取 `DASHSCOPE_API_KEY`，未设置时回退读取 `DASH_SCOPE_API_KEY`（带下划线），两种写法均兼容。以上默认值来自 `python_services/app/llm/config.py` 与 `src/main/resources/application.yml`，均为本地调试值。
+> **提示**：Python 侧优先读取 `DASHSCOPE_API_KEY`，未设置时回退读取 `DASH_SCOPE_API_KEY`（带下划线），两种写法均兼容。以上默认值来自 `python_services/app/llm/config.py` 与 `src/main/resources/application.yml`。
 
 ---
 
