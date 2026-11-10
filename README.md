@@ -121,7 +121,7 @@ graph TB
     subgraph 数据与模型
         C1[(MySQL 8.0<br/>业务数据)]
         C2[(Redis<br/>缓存与会话)]
-        C3[(ChromaDB<br/>向量库)]
+        C3[(Qdrant<br/>向量数据库)]
         C4[阿里云百炼 DashScope<br/>qwen-plus / qwen-vl-max]
     end
 
