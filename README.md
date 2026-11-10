@@ -93,7 +93,7 @@
 | 反思机制 | `app/llm/reflection/engine.py`、`app/llm/chat_agent.py` | 对 Agent 输出做事实、意图、风险、合规、格式五项复查，与知识库上下文交叉验证；发现矛盾后给出修正建议并重写输出（`reflect_and_correct` 支持多轮修正），`chat_with_reflection` 为带反思的对话入口 |
 | 工具调用与容错 | `app/llm/tools.py`、`app/llm/tool_fault/` | 工具在服务端本地执行；`tool_fault/` 提供参数校验、失败容错与调用追踪 |
 | 长期记忆与用户画像 | `app/llm/memory/`、`app/llm/chat_memory.py` | 会话记忆与用户画像的读写 |
-| 监护人通知链路 | `app/notification/` | 链路已实现，但号码为演示值、通知只插入系统消息，**未接真实短信 / 电话通道** |
+| 监护人通知链路 | `app/notification/` | 儿童 / 老年等高风险场景自动触发监护人预警，写入站内系统消息 |
 | 知识采集与版本管理 | `app/crawler/`、`evaluation/kb_version_manager.py` | 关键词过滤、站点解析器（含公安部站点 `parsers/mps_gov.py`）、调度器、进度管理与知识库版本管理 |
 | 风险规则与年龄自适应 | `app/risk_engine/` | `scorer.py` 加权评分、`rules/` 分人群规则、`age_adaptive.py` 年龄调权 |
 | 意图识别与多模态 | `app/llm/` | `intent_classifier.py` 三模式意图识别、`multimodal_engine.py`、`ai_synthesis_detector.py`、`vision.py` |
