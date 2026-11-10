@@ -157,7 +157,7 @@ graph TB
 | LangChain | 0.1.x–0.2.x | AI 应用编排（以 `requirements.txt` 为准） |
 | MySQL | 8.0.24 | 业务数据存储 |
 | Redis | — | 缓存与会话 |
-| ChromaDB | 0.4+ | 向量存储 |
+| Qdrant | — | 向量数据库（语义向量检索与持久化） |
 | MyBatis | — | 管理端 ORM |
 
 ### 前端
