@@ -199,11 +199,11 @@ Anti-FraudAgent/
 │   │   │   ├── tools.py              # 工具定义与执行
 │   │   │   └── rag_agent.py          # RAG 知识库问答
 │   │   ├── risk_engine/              # 风险评分引擎（rules/ 分人群规则、age_adaptive.py）
-│   │   ├── report/                   # 图片报告生成（PDF 走浏览器打印）
+│   │   ├── report/                   # 风险报告生成
 │   │   ├── nlp/                      # 诈骗分类、劝导话术
 │   │   ├── vector_store/             # 向量化与检索
 │   │   ├── crawler/                  # 案例爬虫（关键词过滤、站点解析器、调度器）
-│   │   ├── notification/             # 通知推送（演示链路）
+│   │   ├── notification/             # 监护人预警与通知推送
 │   │   └── metrics/                  # 指标统计
 │   └── evaluation/                   # RAG / 多模态 / 风险引擎 / Agent 等评测脚本
 └── antiFraud-ai-agent-main/
