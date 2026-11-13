@@ -1,6 +1,9 @@
 spring:
   application:
     name: antiFraud-ai-agent
+  mvc:
+    async:
+      request-timeout: 120000    # SSE 异步请求超时（毫秒），与流式读取超时一致
   servlet:
     multipart:
       enabled: true
