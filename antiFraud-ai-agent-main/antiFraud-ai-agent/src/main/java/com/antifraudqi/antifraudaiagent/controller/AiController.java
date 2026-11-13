@@ -6,7 +6,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 
 /**
@@ -24,6 +27,14 @@ public class AiController {
 
     @Resource
     private RestTemplate restTemplate;
+
+    @Value("${python.service.connect-timeout:5000}")
+    private int connectTimeout;
+
+    @Value("${python.service.stream-read-timeout:120000}")
+    private int streamReadTimeout;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     // ===================== AI 对话 =====================
 
