@@ -476,33 +476,14 @@ class ChatAgent:
                 correction = reflection.get("correction", "")
                 if correction:
                     logger.info(f"反思修正: 原输出[{len(response)}字] -> 修正后[{len(correction)}字]")
-                    # 更新 AI 回复（替换最后一条 AI 消息）
                     self.memory.add_message(conversation_id, AIMessage(content=correction))
-                    return correction
+                    response = correction
 
         except Exception as e:
             logger.error(f"反思机制异常: {e}，返回原始输出")
 
-        # 3. 记录到长期记忆
-        if user_id and intent == "反诈预警":
-            try:
-                # 简单的风险等级判定
-                risk_level = "mid"
-                if any(kw in message for kw in ["转账", "汇款", "安全账户", "冻结", "通缉令"]):
-                    risk_level = "critical"
-                elif any(kw in message for kw in ["投资", "刷单", "验证码", "贷款", "杀猪盘"]):
-                    risk_level = "high"
-
-                memory_manager.add_detection_record(
-                    user_id=user_id,
-                    fraud_type=self._detect_fraud_type(message),
-                    risk_level=risk_level,
-                    risk_score=0.7 if risk_level == "high" else (0.9 if risk_level == "critical" else 0.5),
-                    summary=message[:100],
-                )
-            except Exception as e:
-                logger.error(f"记录检测历史失败: {e}")
-
+        if return_details:
+            return {"response": response, "reflection": reflection_summary}
         return response
 
     def _detect_intent(self, message: str) -> str:
