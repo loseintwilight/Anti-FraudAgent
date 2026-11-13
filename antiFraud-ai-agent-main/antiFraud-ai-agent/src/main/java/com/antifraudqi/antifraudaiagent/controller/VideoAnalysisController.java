@@ -42,85 +42,13 @@ public class VideoAnalysisController {
             log.warn("获取文件名失败: {}", e.getMessage());
         }
         
-        log.info("开始处理视频文件: {}", fileName);
-
-        String aiResponse = null;
-        String videoDescription = "视频文件: " + fileName;
-        String riskLevel = "none";
-        String fraudType = "无";
-        String mode = detectMode(fileName);
-
-        try {
-            // 调用 Python 微服务 AI 对话接口
-            String url = pythonServiceUrl + "/api/v1/ai/chat";
-            Map<String, Object> body = new HashMap<>();
-            body.put("message", "请分析这个视频文件的风险: " + fileName);
-            body.put("conversation_id", UUID.randomUUID().toString());
-
-            Map<String, Object> pythonResponse = restTemplate.postForObject(url, body, Map.class);
-            if (pythonResponse != null && pythonResponse.containsKey("response")) {
-                aiResponse = (String) pythonResponse.get("response");
-            }
-            log.info("AI 分析完成，模式: {}", mode);
-
-            if ("anti_fraud".equals(mode)) {
-                String[] riskInfo = analyzeRiskLevel(aiResponse, fileName);
-                riskLevel = riskInfo[0];
-                fraudType = riskInfo[1];
-            }
-
-        } catch (Exception e) {
-            log.error("视频处理异常: {}", e.getMessage(), e);
-        }
-
-        if (aiResponse == null || aiResponse.isEmpty()) {
-            aiResponse = generateDefaultResponse(fileName);
-            if ("anti_fraud".equals(mode)) {
-                riskLevel = "high";
-                fraudType = "冒充公检法诈骗";
-            }
-        }
-        
-        aiResponse = cleanResponse(aiResponse);
-
-        response.put("success", true);
-        response.put("videoDescription", videoDescription);
-        response.put("aiResponse", aiResponse);
-        response.put("frameCount", 0);
-        response.put("riskLevel", riskLevel);
-        response.put("fraudType", fraudType);
-        response.put("mode", mode);
-
-        log.info("视频分析完成，模式: {}, 风险等级: {}, 诈骗类型: {}", mode, riskLevel, fraudType);
-        return response;
     }
     
-    private String detectMode(String fileName) {
-        String lowerFileName = fileName.toLowerCase();
-        
-        String[] chatKeywords = {"你好", "在吗", "嗨", "hello", "hi", "天气", "季节", "颜色", "食物", "音乐", "心情", "emo"};
-        for (String keyword : chatKeywords) {
-            if (lowerFileName.contains(keyword)) {
-                return "chat";
-            }
-        }
-        
-        String[] consultationKeywords = {"什么是", "有哪些", "怎么判断", "为什么", "会不会", "能不能", "是否", "如何", "啥是", "什么叫", "何为"};
-        for (String keyword : consultationKeywords) {
-            if (lowerFileName.contains(keyword)) {
-                return "consultation";
-            }
-        }
-        
-        return "anti_fraud";
-    }
-
-    private String[] analyzeRiskLevel(String response, String fileName) {
+    private String[] analyzeRiskLevel(String response) {
         String riskLevel = "low";
         String fraudType = "未知诈骗类型";
         
-        String lowerFileName = fileName.toLowerCase();
-        String lowerResponse = response.toLowerCase();
+        String lowerResponse = response == null ? "" : response.toLowerCase();
         
         String[] highRiskKeywords = {
             "投资导师", "稳赚不赔", "赌博平台", "深度杀猪盘",
