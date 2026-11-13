@@ -23,17 +23,35 @@ import java.util.regex.Pattern;
 @Slf4j
 public class VideoAnalysisController {
 
-    @Value("${python.service.url}")
-    private String pythonServiceUrl;
+    @Value("${video.analysis.max-frames:5}")
+    private int maxFrames;
 
     @Resource
-    private RestTemplate restTemplate;
+    private VideoFrameExtractor videoFrameExtractor;
+
+    @Resource
+    private QwenVLVideoAnalysisService qwenVLVideoAnalysisService;
 
     @PostMapping(value = "/check-video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Map<String, Object> checkVideo(@RequestParam("file") MultipartFile file) {
         Map<String, Object> response = new HashMap<>();
-        
-        String fileName = "未知文件";
+        String fileName = (file != null && file.getOriginalFilename() != null)
+                ? file.getOriginalFilename() : "未知文件";
+
+        // 保持既有返回结构；失败时以 success=false 加真实 error 说明原因
+        response.put("success", false);
+        response.put("videoDescription", "视频文件: " + fileName);
+        response.put("aiResponse", "");
+        response.put("frameCount", 0); // 失败预设；成功路径以真实抽取帧数覆盖
+        response.put("riskLevel", "none");
+        response.put("fraudType", "无");
+        response.put("mode", "anti_fraud");
+
+        if (file == null || file.isEmpty()) {
+            response.put("error", "未接收到视频文件或文件内容为空");
+            return response;
+        }
+
         try {
             // 读取真实文件字节并抽帧，不再依据文件名判定内容
             byte[] videoData = file.getBytes();
