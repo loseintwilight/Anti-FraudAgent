@@ -35,11 +35,32 @@ public class VideoAnalysisController {
         
         String fileName = "未知文件";
         try {
-            if (file != null && file.getOriginalFilename() != null) {
-                fileName = file.getOriginalFilename();
+            // 读取真实文件字节并抽帧，不再依据文件名判定内容
+            byte[] videoData = file.getBytes();
+            List<String> frames = videoFrameExtractor.extractKeyFrames(videoData, maxFrames);
+            if (frames.isEmpty()) {
+                response.put("error", "视频抽帧失败：未能从文件中解码出任何帧，请确认文件为可解码的视频格式");
+                return response;
             }
+            response.put("frameCount", frames.size());
+
+            // 逐帧交给视觉大模型分析
+            String aiResponse = qwenVLVideoAnalysisService.analyzeVideoFrames(frames);
+
+            // 风险判定只依据真实分析结果文本，不再掺入文件名关键词
+            String[] riskInfo = analyzeRiskLevel(aiResponse);
+            response.put("success", true);
+            response.put("aiResponse", cleanResponse(aiResponse));
+            response.put("riskLevel", riskInfo[0]);
+            response.put("fraudType", riskInfo[1]);
+
+            log.info("视频分析完成: 文件={}, 抽取帧数={}, 风险等级={}, 诈骗类型={}",
+                    fileName, frames.size(), riskInfo[0], riskInfo[1]);
+            return response;
         } catch (Exception e) {
-            log.warn("获取文件名失败: {}", e.getMessage());
+            log.error("视频处理异常: {}", e.getMessage(), e);
+            response.put("error", "视频分析失败: " + e.getMessage());
+            return response;
         }
         
     }
