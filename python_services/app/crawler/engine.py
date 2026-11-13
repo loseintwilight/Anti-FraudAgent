@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from typing import Any, Callable, Dict, List, Optional
 
@@ -206,21 +207,15 @@ class CrawlerEngine:
 
     @staticmethod
     def _get_source_urls(parser_name: str) -> List[Dict[str, Any]]:
-        """获取指定来源的 URL 配置"""
-        if parser_name == "mps_gov":
-            return [
-                {
-                    "url": "https://www.mps.gov.cn/n2255079/index.html",
-                    "parser": "mps_gov",
-                    "params": None,
-                }
-            ]
-        elif parser_name == "news":
-            return [
-                {
-                    "url": "https://news.sina.com.cn/c/2024-01-01/doc-xxxxx.shtml",
-                    "parser": "news",
-                    "params": None,
-                }
-            ]
-        return []
+        """按解析器名称读取可配置的真实数据源 URL。
+
+        数据源由环境变量 CRAWLER_<PARSER_NAME>_URLS 提供（逗号分隔）。
+        未配置时返回空列表。
+        """
+        env_key = f"CRAWLER_{parser_name.upper()}_URLS"
+        raw = os.environ.get(env_key, "")
+        urls = [u.strip() for u in raw.split(",") if u.strip()]
+        return [
+            {"url": url, "parser": parser_name, "params": None}
+            for url in urls
+        ]

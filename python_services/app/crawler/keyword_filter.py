@@ -135,6 +135,7 @@ class AIContentFilter:
             "structured_content": structured_content,
             "detected_types": detected_types,
             "valid_texts": valid_paragraphs[:10],
+            "mode": self.mode,
         }
 
 
