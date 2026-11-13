@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Dict, List, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +48,15 @@ VALID_ANTI_FRAUD_KEYWORDS: Set[str] = {
     "止付", "冻结", "涉案账户", "惩戒", "黑名单",
 }
 
+# 可替换的语义判定接口：接收文本，返回是否为有效反诈内容
+SemanticJudge = Callable[[str], bool]
+
 
 class AIContentFilter:
-    """AI 内容过滤器：基于关键词 + 规则 + 大模型语义理解"""
+    """反诈内容过滤器：可替换的语义判定接口，未配置时走关键词规则。"""
 
-    def __init__(self):
+    def __init__(self, judge: Optional[SemanticJudge] = None) -> None:
+        self._judge = judge
         self._cache: Dict[str, bool] = {}
 
     @property
