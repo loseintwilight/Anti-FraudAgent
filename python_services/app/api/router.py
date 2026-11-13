@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, AsyncGenerator
+from typing import Any, Dict, AsyncGenerator, Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
 from app.api.schemas import (
     ChatReportRequest,
@@ -41,6 +42,15 @@ from app.risk_engine.profile import UserProfile
 from app.risk_engine.scorer import RiskScorer
 
 logger = logging.getLogger(__name__)
+
+
+class ReflectChatRequest(BaseModel):
+    """反思对话请求（仅新增，不改动既有 ChatRequest）"""
+    message: str = Field(..., description="用户消息内容")
+    conversation_id: str = Field(default="default", description="对话ID")
+    user_id: Optional[str] = Field(default=None, description="用户ID（用于长期画像）")
+    enable_reflection: bool = Field(default=True, description="是否启用反思")
+
 
 # 创建路由器
 router = APIRouter()
