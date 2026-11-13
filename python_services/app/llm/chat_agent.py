@@ -460,19 +460,25 @@ class ChatAgent:
         try:
             # 意图判定
             intent = self._detect_intent(message)
-
-            # 反思
+            context = _retrieve_context(message)  # contract c2：真实检索，失败降级空串
             reflection = reflection_engine.reflect(
                 user_message=message,
                 agent_output=response,
                 intent=intent,
-                context="",
+                context=context,
             )
+            reflection_summary = {
+                "has_issues": reflection.get("has_issues", False),
+                "issue_type": reflection.get("issue_type", "无"),
+                "issue_description": reflection.get("issue_description", ""),
+                "correction": reflection.get("correction", ""),
+                "confidence": reflection.get("confidence", 0),
+                "context_used": reflection.get("context_used", False),
+                "context_length": reflection.get("context_length", 0),
+            }
 
             if reflection.get("has_issues"):
                 logger.warning(f"反思发现问题: {reflection.get('issue_type')}")
-
-                # 修正
                 correction = reflection.get("correction", "")
                 if correction:
                     logger.info(f"反思修正: 原输出[{len(response)}字] -> 修正后[{len(correction)}字]")
