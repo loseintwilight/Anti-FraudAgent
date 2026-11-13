@@ -6,7 +6,9 @@
 """
 from __future__ import annotations
 
+import base64
 import logging
+import os
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -14,7 +16,8 @@ from pydantic import BaseModel, Field
 
 from app.llm.multimodal_engine import multimodal_engine
 from app.llm.ai_synthesis_detector import ai_synthesis_detector
-from app.llm.intent_classifier import intent_classifier
+from app.llm.signal_detection import analyze_image_artifacts, analyze_audio_spectrum
+from app.llm.vision import vision_analyzer
 from app.metrics.tracker import metrics_tracker
 
 logger = logging.getLogger(__name__)
