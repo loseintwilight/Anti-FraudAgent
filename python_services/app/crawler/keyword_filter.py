@@ -55,13 +55,30 @@ class AIContentFilter:
     def __init__(self):
         self._cache: Dict[str, bool] = {}
 
+    @property
+    def mode(self) -> str:
+        """当前判定模式：rules（默认规则）或 model（已注入语义判定实现）。"""
+        return "rules" if self._judge is None else "model"
+
+    def set_judge(self, judge: Optional[SemanticJudge]) -> None:
+        """替换语义判定实现；传 None 回到规则模式。"""
+        self._judge = judge
+        self._cache.clear()
+
     def is_valid_anti_fraud_content(self, text: str) -> bool:
         """判断文本是否为有效反诈内容"""
         if not text or len(text.strip()) < 20:
             return False
 
-        text_lower = text.lower()
+        if self._judge is not None:
+            result = bool(self._judge(text))
+            self._cache[text] = result
+            return result
 
+        return self._rules_judge(text)
+
+    def _rules_judge(self, text: str) -> bool:
+        """关键词计数的确定性规则判定"""
         cache_key = hash(text) % 10000
         if cache_key in self._cache:
             return self._cache[cache_key]
@@ -123,8 +140,8 @@ class AIContentFilter:
                 detected_types.append(kw)
 
         logger.info(
-            f"AI内容过滤: 总{total}段 → 有效{valid_count}段 + 噪音{noise_count}段, "
-            f"过滤率={noise_count/total:.1%}" if total > 0 else "无内容"
+            f"内容过滤: 总{total}段 → 有效{valid_count}段 + 噪音{noise_count}段, "
+            f"过滤率={noise_count/total:.1%}, mode={self.mode}" if total > 0 else "无内容"
         )
 
         return {
