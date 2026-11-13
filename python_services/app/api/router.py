@@ -140,8 +140,10 @@ async def compute_risk_score(request: RiskRequest) -> RiskResponse:
         profile_builder = _get_profile_builder()
         scorer = _get_scorer()
 
-        profile = profile_builder.build(request.behavior, request.user_id)
-        score_result = scorer.evaluate(profile)
+        profile = profile_builder.build(
+            request.behavior, request.user_id, request.fraud_type
+        )
+        score_result = scorer.evaluate(profile, profile.fraud_type)
 
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -152,6 +154,7 @@ async def compute_risk_score(request: RiskRequest) -> RiskResponse:
             risk_sources=score_result["sources"],
             profile_summary=score_result["profile_summary"],
             timestamp=timestamp,
+            weight_adjustments=score_result.get("weight_adjustments"),
         )
     except Exception as e:
         logger.exception("风险评分计算失败")
@@ -373,7 +376,7 @@ async def analyze_image(request: VisionRequest) -> VisionResponse:
 async def rag_search(request: RAGSearchRequest) -> RAGSearchResponse:
     """
     RAG 知识检索
-    - 基于 LangChain + ChromaDB 向量检索
+    - 基于 Qdrant 的混合检索（BM25 + 向量召回 / RRF 融合 / 精排）
     - 返回与查询最相关的文档
     """
     try:
