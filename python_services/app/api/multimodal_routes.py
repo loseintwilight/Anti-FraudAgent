@@ -90,6 +90,7 @@ async def analyze_cross_image(request: CrossImageRequest) -> CrossImageResponse:
     result = multimodal_engine.analyze_cross_image(
         text_input=request.text_input,
         image_descriptions=request.image_descriptions,
+        images_base64=request.images_base64 or None,
     )
 
     # 记录评测结果
@@ -123,8 +124,16 @@ async def detect_ai_synthesis(request: AISynthesisRequest) -> AISynthesisRespons
     """
     AI 合成内容检测：检测换脸(Deepfake)和拟声(Voice Cloning)
     - 检出率目标：85%+
+    - 提供 media_base64 时，融合真实信号层分数与模型语义判定
     """
-    if request.media_type == "audio":
+    if request.media_base64:
+        media_bytes = _decode_b64(request.media_base64)
+        result = ai_synthesis_detector.detect_with_signals(
+            media_type=request.media_type,
+            description=request.description,
+            media_bytes=media_bytes,
+        )
+    elif request.media_type == "audio":
         result = ai_synthesis_detector.detect_audio_synthesis(request.description)
     else:
         result = ai_synthesis_detector.detect_image_synthesis(request.description)
