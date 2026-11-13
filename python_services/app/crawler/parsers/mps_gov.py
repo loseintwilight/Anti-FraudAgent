@@ -76,18 +76,24 @@ def parse(html: str) -> List[Dict[str, Any]]:
 
             # 提取日期（通常包含在列表项中）
             date_str = ""
+            content = ""
             parent = item.parent
             if parent:
                 date_elem = parent.find("span", class_=re.compile(r"date|time"))
                 if date_elem:
                     date_str = date_elem.get_text(strip=True)
+                summary_elem = parent.find(
+                    "p", class_=re.compile(r"summary|desc|abstract|content|intro")
+                )
+                if summary_elem:
+                    content = summary_elem.get_text(strip=True)
 
             article = {
                 "id": f"mps_{datetime.now().strftime('%Y%m%d%H%M%S')}_{len(articles)}",
                 "title": title,
                 "url": href,
                 "date": date_str,
-                "content": title,  # 完整内容需进一步抓取详情页
+                "content": content,
                 "source": "mps_gov",
                 "crawl_time": datetime.now().isoformat(),
             }
