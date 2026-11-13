@@ -130,15 +130,20 @@ public class ReportService {
         Map<String, Object> request = new HashMap<>();
         request.put("report_id", report.getReportId());
         request.put("fraud_type", report.getFraudType());
-        request.put("risk_level", report.getRiskLevel());
-        request.put("risk_score", report.getRiskScore());
-        request.put("transfer_warning", report.getTransferWarning());
-        request.put("legal_guidance", report.getLegalGuidance());
-        request.put("created_at", report.getCreatedAt().toString());
+        request.put("output_format", "png");
 
         try {
             log.info("调用 Python 微服务生成报告图片: reportId={}", reportId);
-            byte[] imageBytes = restTemplate.postForObject(url, request, byte[].class);
+            Map<String, Object> response = restTemplate.postForObject(url, request, Map.class);
+            Object encoded = response == null ? null : response.get("image_base64");
+            if (encoded == null) {
+                throw new RuntimeException("报告服务未返回图片数据");
+            }
+            String base64 = encoded.toString();
+            if (base64.contains(",")) {
+                base64 = base64.substring(base64.indexOf(',') + 1);
+            }
+            byte[] imageBytes = Base64.getDecoder().decode(base64);
             log.info("报告图片生成成功: reportId={}", reportId);
             return imageBytes;
         } catch (Exception e) {

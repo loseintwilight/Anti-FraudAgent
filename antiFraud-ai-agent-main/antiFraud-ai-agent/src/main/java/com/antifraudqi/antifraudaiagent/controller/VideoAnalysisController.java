@@ -1,5 +1,7 @@
 package com.antifraudqi.antifraudaiagent.controller;
 
+import com.antifraudqi.antifraudaiagent.service.QwenVLVideoAnalysisService;
+import com.antifraudqi.antifraudaiagent.service.VideoFrameExtractor;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
