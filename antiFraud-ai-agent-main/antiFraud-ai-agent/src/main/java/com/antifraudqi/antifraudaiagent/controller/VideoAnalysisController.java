@@ -167,7 +167,7 @@ public class VideoAnalysisController {
         };
         
         for (String keyword : highRiskKeywords) {
-            if (lowerFileName.contains(keyword) || lowerResponse.contains(keyword)) {
+            if (lowerResponse.contains(keyword)) {
                 riskLevel = "high";
                 fraudType = extractFraudType(response, keyword);
                 break;
@@ -176,7 +176,7 @@ public class VideoAnalysisController {
         
         if (riskLevel.equals("low")) {
             for (String keyword : mediumRiskKeywords) {
-                if (lowerFileName.contains(keyword) || lowerResponse.contains(keyword)) {
+                if (lowerResponse.contains(keyword)) {
                     riskLevel = "medium";
                     fraudType = extractFraudType(response, keyword);
                     break;
@@ -186,7 +186,7 @@ public class VideoAnalysisController {
         
         if (riskLevel.equals("low")) {
             for (String keyword : lowRiskKeywords) {
-                if (lowerFileName.contains(keyword) || lowerResponse.contains(keyword)) {
+                if (lowerResponse.contains(keyword)) {
                     riskLevel = "low";
                     fraudType = extractFraudType(response, keyword);
                     break;
