@@ -74,7 +74,7 @@ def parse(html: str) -> List[Dict[str, Any]]:
             elif not href.startswith("http"):
                 href = f"https://www.mps.gov.cn/{href}"
 
-            # 提取日期（通常包含在列表项中）
+            # 提取日期与列表项中的摘要/正文片段
             date_str = ""
             content = ""
             parent = item.parent

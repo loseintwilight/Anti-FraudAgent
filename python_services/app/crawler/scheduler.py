@@ -4,7 +4,7 @@
 
 调度流程:
   1. 每 6 小时触发一次爬取任务
-  2. 爬取结果写入 vector_store (ChromaDB)
+  2. 爬取结果写入 vector_store (Qdrant)
   3. 支持手动立即触发
 """
 
@@ -168,7 +168,7 @@ class CrawlerScheduler:
                     # 生成向量
                     embedding = embedder.embed(text)
 
-                    # 存储到 ChromaDB
+                    # 存储到 Qdrant
                     retriever.add_document(
                         document_id=article.get("id", ""),
                         text=text,
