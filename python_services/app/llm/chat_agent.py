@@ -340,7 +340,9 @@ class ChatAgent:
         try:
             history = self.memory.get_langchain_messages(conversation_id, limit=10)
             messages = [
-                SystemMessage(content=SYSTEM_PROMPT),
+                *self._build_system_messages(
+                    conversation_id, user_id, message, with_retrieval=False
+                ),
                 *history,
                 HumanMessage(content=message),
             ]
@@ -355,6 +357,7 @@ class ChatAgent:
             if full_response:
                 self.memory.add_message(conversation_id, HumanMessage(content=message))
                 self.memory.add_message(conversation_id, AIMessage(content=full_response))
+                self._post_chat_profile_update(user_id or conversation_id, message)
 
         except Exception as e:
             logger.error(f"流式对话失败: {e}", exc_info=True)
@@ -437,11 +440,12 @@ class ChatAgent:
         conversation_id: str = "default",
         user_id: str = None,
         enable_reflection: bool = True,
-    ) -> str:
+        return_details: bool = False,
+    ):
         """
         带反思机制的对话
-        1. 先调用基础对话获取输出
-        2. 反思输出：检查事实错误、意图误判、风险不当
+        1. 先调用基础对话获取输出（已接入画像长期记忆与检索上下文）
+        2. 以真实检索上下文做事实一致性核对的反思
         3. 如有问题，修正后返回
 
         return_details=True 时返回 {"response": str, "reflection": dict}，供 API 端点核验。
