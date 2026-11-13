@@ -126,9 +126,13 @@ public class ReportService {
         FraudReport report = fraudReportRepository.findByReportId(reportId)
                 .orElseThrow(() -> new RuntimeException("报告不存在: " + reportId));
 
-        String url = pythonServiceUrl + "/api/report/generate-image";
+        String url = pythonServiceUrl + "/api/v1/report/generate";
         Map<String, Object> request = new HashMap<>();
-        request.put("report_id", report.getReportId());
+        request.put("user_id", report.getUserId());
+        request.put("risk_level", report.getRiskLevel() == null ? "low" : report.getRiskLevel());
+        request.put("risk_score", report.getRiskScore());
+        request.put("profile_summary", "");
+        request.put("risk_sources", Collections.emptyList());
         request.put("fraud_type", report.getFraudType());
         request.put("output_format", "png");
 
