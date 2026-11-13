@@ -60,6 +60,10 @@ class RiskRequest(BaseModel):
     """风险评分请求"""
     user_id: str = Field(..., description="用户ID")
     behavior: UserBehavior = Field(..., description="用户行为数据")
+    fraud_type: Optional[str] = Field(
+        default=None,
+        description="诈骗案件类型（刷单返利/冒充公检法/杀猪盘/钓鱼链接/虚假投资等），参与案件类型动态加权",
+    )
 
 
 class RiskSource(BaseModel):
@@ -78,6 +82,9 @@ class RiskResponse(BaseModel):
     risk_sources: List[RiskSource] = Field(default_factory=list, description="风险来源明细")
     profile_summary: str = Field(default="", description="用户画像摘要")
     timestamp: str = Field(..., description="评估时间戳")
+    weight_adjustments: Optional[Dict[str, Any]] = Field(
+        default=None, description="年龄与案件类型的调权明细"
+    )
 
 
 # ===================== 报告生成相关模型 =====================

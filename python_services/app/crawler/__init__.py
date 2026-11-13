@@ -1,6 +1,6 @@
 """
 AI爬虫模块
-- 大模型语义过滤（区别于传统 XPath/CSS 选择器）
+- 可插拔语义过滤（规则 / 模型双模式，未配置模型时按规则如实标注）
 - 断点续爬进度管理
 """
 from app.crawler.keyword_filter import (
