@@ -205,3 +205,62 @@ async def get_multimodal_metrics() -> MetricsResponse:
         intent_accuracy=intent_metrics.get("accuracy", 0),
         intent_confusion_matrix=intent_metrics.get("confusion_matrix", {}),
     )
+
+
+# ========== 信号层：图像伪影（无需 API Key，返回真实数值）==========
+
+@router.post("/signal/image", response_model=SignalImageResponse, tags=["Multimodal Signals"])
+async def image_signal(request: SignalImageRequest) -> SignalImageResponse:
+    """对真实图片字节计算视觉伪影特征（拉普拉斯清晰度/FFT 高频/块效应/色彩统计）。"""
+    sig = analyze_image_artifacts(_decode_b64(request.image_base64))
+    return SignalImageResponse(
+        artifact_score=sig["artifact_score"],
+        features=sig["features"],
+    )
+
+
+# ========== 音频输入通道：真实频谱 + 可选 ASR ==========
+
+@router.post("/audio/spectrum", response_model=AudioSpectrumResponse, tags=["Multimodal Signals"])
+async def audio_spectrum(request: AudioSpectrumRequest) -> AudioSpectrumResponse:
+    """
+    接收音频字节，返回由分帧 FFT 真实计算的频谱特征。
+    配置 ASR_API_URL 时尝试转写；未配置时如实返回频谱结果，不返回预置话术。
+    """
+    raw = _decode_b64(request.audio_base64)
+    sig = analyze_audio_spectrum(raw)
+    transcript, asr_configured, note = _maybe_transcribe(raw)
+    return AudioSpectrumResponse(
+        synthesis_score=sig["synthesis_score"],
+        features=sig["features"],
+        transcript=transcript,
+        asr_configured=asr_configured,
+        note=note,
+    )
+
+
+# ========== 视频帧逐帧分析（复用 vision.py，不依赖 Java 控制器）==========
+
+@router.post("/video/frames", response_model=VideoFramesResponse, tags=["Multimodal Signals"])
+async def video_frames(request: VideoFramesRequest) -> VideoFramesResponse:
+    """接收真实视频帧列表，逐帧复用视觉模型分析，并计算各帧真实伪影特征。"""
+    frames_out: List[Dict[str, Any]] = []
+    scores: List[float] = []
+    vision_results = vision_analyzer.analyze_frames(request.frames_base64, prompt=request.prompt)
+    for idx, (b64, vr) in enumerate(zip(request.frames_base64, vision_results)):
+        sig = analyze_image_artifacts(_decode_b64(b64))
+        scores.append(sig["artifact_score"])
+        frames_out.append({
+            "index": idx,
+            "vision": vr,
+            "signal": {
+                "artifact_score": sig["artifact_score"],
+                "features": sig["features"],
+            },
+        })
+    mean_score = sum(scores) / len(scores) if scores else 0.0
+    return VideoFramesResponse(
+        frame_count=len(request.frames_base64),
+        mean_artifact_score=round(mean_score, 6),
+        frames=frames_out,
+    )
