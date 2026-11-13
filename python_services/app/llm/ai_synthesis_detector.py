@@ -78,6 +78,7 @@ class AISynthesisDetector:
     @property
     def model(self) -> ChatDashScope:
         if self._model is None:
+            from langchain_dashscope import ChatDashScope
             self._model = ChatDashScope(
                 model=LLMConfig.CHAT_MODEL,
                 dashscope_api_key=LLMConfig.DASHSCOPE_API_KEY,
@@ -94,6 +95,7 @@ class AISynthesisDetector:
             prompt = AI_SYNTHESIS_IMAGE_PROMPT.format(
                 image_description=image_description[:1500]
             )
+            from langchain_core.messages import HumanMessage
             response = self.model.invoke([HumanMessage(content=prompt)])
             result_text = response.content if response.content else ""
 
@@ -125,6 +127,7 @@ class AISynthesisDetector:
             prompt = AI_SYNTHESIS_AUDIO_PROMPT.format(
                 audio_description=audio_description[:1500]
             )
+            from langchain_core.messages import HumanMessage
             response = self.model.invoke([HumanMessage(content=prompt)])
             result_text = response.content if response.content else ""
 
@@ -146,6 +149,63 @@ class AISynthesisDetector:
         latency = (time.time() - start_time) * 1000
         result["_latency_ms"] = round(latency, 2)
         result["_media_type"] = "audio"
+        return result
+
+    def detect_with_signals(
+        self,
+        media_type: str,
+        description: str,
+        media_bytes: Optional[bytes] = None,
+    ) -> Dict[str, Any]:
+        """
+        融合真实信号层分数与模型语义判定（fuse_signals），不再只靠 prompt 文本。
+
+        media_bytes 提供时：对字节做数值计算得到图像/音频信号分；
+        信号特征同时注入语义判定的 prompt；最后用 fuse_signals 融合两路结果。
+        无 API Key / 无媒体字节时，信号层端点仍会返回真实数值特征。
+        """
+        from app.llm.signal_detection import (
+            analyze_image_artifacts,
+            analyze_audio_spectrum,
+            fuse_signals,
+        )
+
+        start_time = time.time()
+        image_signal: Optional[Dict[str, Any]] = None
+        audio_signal: Optional[Dict[str, Any]] = None
+
+        if media_bytes:
+            if media_type == "audio":
+                audio_signal = analyze_audio_spectrum(media_bytes)
+            else:
+                image_signal = analyze_image_artifacts(media_bytes)
+
+        primary_signal = image_signal or audio_signal
+        # 让语义判定也基于真实数值特征，而非纯文字描述
+        effective_description = (description + "\n" + _format_signal(primary_signal)).strip()
+
+        if media_type == "audio":
+            semantic = self.detect_audio_synthesis(effective_description)
+        else:
+            semantic = self.detect_image_synthesis(effective_description)
+
+        fused = fuse_signals(image_signal, audio_signal, semantic)
+
+        signal_features = (primary_signal or {}).get("features", {})
+        signal_score_key = "artifact_score" if image_signal else "synthesis_score"
+        result: Dict[str, Any] = {
+            "is_ai_generated": fused["is_ai_generated"],
+            "confidence": fused["fused_score"],
+            "artifacts_detected": list(semantic.get("artifacts_detected") or []),
+            "analysis": fused["analysis"] + " | 语义判定: " + str(semantic.get("analysis", "")),
+            "signal_features": signal_features,
+            "signal_score": (primary_signal or {}).get(signal_score_key, 0.0),
+            "fused": fused,
+            "_media_type": media_type,
+        }
+
+        latency = (time.time() - start_time) * 1000
+        result["_latency_ms"] = round(latency, 2)
         return result
 
     def record_detection_result(self, is_ai_generated: bool, detected: bool):
