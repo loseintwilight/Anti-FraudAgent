@@ -53,6 +53,7 @@ class AISynthesisResponse(BaseModel):
     analysis: str
     media_type: str
     latency_ms: float
+    signal_features: Optional[Dict[str, Any]] = Field(default=None, description="信号层真实数值特征（新增可选字段）")
 
 
 class IntentClassifyRequest(BaseModel):
@@ -76,6 +77,40 @@ class MetricsResponse(BaseModel):
     intent_confusion_matrix: Dict[str, Dict[str, int]]
 
 
+# ---- 新增：信号层与音视频输入通道 ----
+
+class SignalImageRequest(BaseModel):
+    image_base64: str = Field(..., description="真实图片 base64")
+
+
+class SignalImageResponse(BaseModel):
+    artifact_score: float = Field(..., description="由图像字节真实计算得到的伪影分 0~1")
+    features: Dict[str, Any] = Field(..., description="真实数值特征")
+
+
+class AudioSpectrumRequest(BaseModel):
+    audio_base64: str = Field(..., description="真实音频字节的 base64")
+
+
+class AudioSpectrumResponse(BaseModel):
+    synthesis_score: float = Field(..., description="由音频字节真实计算得到的合成可疑分 0~1")
+    features: Dict[str, Any] = Field(..., description="真实频谱特征")
+    transcript: Optional[str] = Field(default=None, description="可选 ASR 转写文本（未配置时为 None）")
+    asr_configured: bool = Field(default=False, description="是否配置了可选 ASR")
+    note: str = Field(default="", description="ASR 状态说明（如实标注，非预置话术）")
+
+
+class VideoFramesRequest(BaseModel):
+    frames_base64: List[str] = Field(..., description="视频帧 base64 列表（按时间顺序）")
+    prompt: Optional[str] = Field(default=None, description="逐帧视觉分析自定义提示词")
+
+
+class VideoFramesResponse(BaseModel):
+    frame_count: int
+    mean_artifact_score: float = Field(..., description="各帧真实伪影分的均值")
+    frames: List[Dict[str, Any]]
+
+
 # ========== 跨图关联分析 ==========
 
 @router.post("/cross-image", response_model=CrossImageResponse)
@@ -84,8 +119,8 @@ async def analyze_cross_image(request: CrossImageRequest) -> CrossImageResponse:
     跨图关联分析：多张图片+文字混合输入，检测跨图关联的诈骗场景
     - 跨图识别率目标：89%
     """
-    if not request.image_descriptions:
-        raise HTTPException(status_code=400, detail="至少需要一张图片描述")
+    if not request.image_descriptions and not request.images_base64:
+        raise HTTPException(status_code=400, detail="至少需要一张图片描述或一张真实图片")
 
     result = multimodal_engine.analyze_cross_image(
         text_input=request.text_input,
