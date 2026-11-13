@@ -87,6 +87,11 @@ sources/
 # ========== 临时文件 ==========
 tmp/
 
+# ========== 内部规划产物与评测生成结果（不提交） ==========
+.workbuddy/
+python_services/evaluation/results/
+python_services/qdrant_db/
+
 # ========== HTTP 测试数据（不提交） ==========
 python_services/false/
 python_services/logs/

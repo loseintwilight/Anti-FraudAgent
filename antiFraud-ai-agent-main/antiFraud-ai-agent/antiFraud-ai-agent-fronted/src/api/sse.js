@@ -2,7 +2,7 @@ import { API_BASE } from '../config'
 
 /**
  * 拼接带 query 的完整 URL（支持绝对 API_BASE 或以 / 开头的相对前缀，便于 Vite 代理）。
- * @param {string} path 如 `/ai/love_app/chat/sse`
+ * @param {string} path 如 `/ai/chat/stream`
  * @param {Record<string, string>} query
  */
 export function buildApiUrl(path, query = {}) {

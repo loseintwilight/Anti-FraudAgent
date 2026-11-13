@@ -328,6 +328,7 @@ npm install && npm run dev
 ### AI 能力
 
 ```
+GET  /ai/chat/stream            # SSE 流式对话
 POST /ai/love_app/chat/sync     # 同步对话
 POST /ai/love_app/chat/tools    # 带工具调用对话
 POST /ai/love_app/chat/report   # 报告生成对话
