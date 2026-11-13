@@ -48,6 +48,13 @@ jwt:
 python:
   service:
     url: http://localhost:8501
+    connect-timeout: 5000          # SSE 代理连接 Python 的超时（毫秒）
+    stream-read-timeout: 120000    # SSE 代理流式读取超时（毫秒）
+
+# 视频抽帧分析配置
+video:
+  analysis:
+    max-frames: 5                  # 单次视频分析最多抽取的帧数
 
 server:
   port: 8123

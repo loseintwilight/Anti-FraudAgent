@@ -34,10 +34,11 @@ public class RiskAssessmentService {
         String url = pythonServiceUrl + "/api/v1/risk/score";
         Map<String, Object> request = new HashMap<>();
         request.put("user_id", userId);
-        request.put("text", inputText);
+        request.put("behavior", buildBehavior());
 
         try {
-            log.info("调用 Python 微服务进行风险评估: userId={}", userId);
+            log.info("调用 Python 微服务进行风险评估: userId={}, 输入文本长度={}", userId,
+                    inputText == null ? 0 : inputText.length());
             Map<String, Object> response = restTemplate.postForObject(url, request, Map.class);
             log.info("风险评估成功: userId={}, result={}", userId, response);
             return response;
