@@ -50,6 +50,63 @@ public class AiController {
         }
     }
 
+    /**
+     * 前端 SSE 流式对话代理。
+     * 前端以 GET + query（message / chatId）请求，Python 侧流式端点为 POST + JSON（ChatRequest），
+     * 此处完成协议转换，并把 Python 的 text/event-stream 逐块回写给前端。
+     */
+    @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public ResponseEntity<StreamingResponseBody> streamChat(
+            @RequestParam(name = "message", defaultValue = "") String message,
+            @RequestParam(name = "chatId", defaultValue = "default") String chatId) {
+
+        String pythonUrl = pythonServiceUrl + "/api/v1/ai/chat/stream";
+        Map<String, Object> body = new HashMap<>();
+        body.put("message", message);
+        body.put("conversation_id", chatId);
+
+        // 流式连接单独设置连接/读取超时，避免被全局 RestTemplate 配置提前掐断
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(connectTimeout);
+        factory.setReadTimeout(streamReadTimeout);
+        RestTemplate streamingRestTemplate = new RestTemplate(factory);
+
+        StreamingResponseBody stream = outputStream -> {
+            try {
+                streamingRestTemplate.execute(pythonUrl, HttpMethod.POST, request -> {
+                    request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                    request.getHeaders().setAccept(List.of(MediaType.TEXT_EVENT_STREAM));
+                    request.getBody().write(OBJECT_MAPPER.writeValueAsBytes(body));
+                }, response -> {
+                    try (InputStream in = response.getBody()) {
+                        byte[] buffer = new byte[2048];
+                        int len;
+                        while ((len = in.read(buffer)) != -1) {
+                            outputStream.write(buffer, 0, len);
+                            outputStream.flush(); // 逐块 flush，保证前端实时收到
+                        }
+                    }
+                    return null;
+                });
+            } catch (Exception e) {
+                // 客户端断开、读取超时或转发异常：结束流即可
+                log.warn("SSE 流中断: {}", e.getMessage());
+            } finally {
+                try {
+                    outputStream.flush();
+                } catch (IOException ignored) {
+                    // 客户端已断开，无需处理
+                }
+            }
+        };
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.TEXT_EVENT_STREAM);
+        headers.add(HttpHeaders.CACHE_CONTROL, "no-cache");
+        headers.add("X-Accel-Buffering", "no");
+        return new ResponseEntity<>(stream, headers, HttpStatus.OK);
+    }
+
     // ===================== 带工具对话 =====================
 
     @PostMapping("/love_app/chat/tools")

@@ -2227,7 +2227,7 @@ async function send() {
 
   try {
     // 调用后端API获取AI回复（SSE流式）
-    const url = buildApiUrl('/ai/love_app/chat/sse', {
+    const url = buildApiUrl('/ai/chat/stream', {
       message: fullText,
       chatId: session.id,
     })
