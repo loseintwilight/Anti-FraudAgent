@@ -22,11 +22,78 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/multimodal", tags=["Multimodal"])
 
 
+def _get_intent_classifier():
+    """
+    意图分类模块顶层依赖 LangChain，改为按需 lazy import：
+    保证 main.py 挂载本路由时不会因缺少重依赖而导入失败。
+    """
+    try:
+        from app.llm.intent_classifier import intent_classifier
+        return intent_classifier
+    except Exception as e:
+        logger.warning(f"意图分类模块不可用，相关能力降级: {e}")
+        return None
+
+
+def _decode_b64(value: str) -> bytes:
+    """解码 base64（兼容 data URI 前缀），失败返回空字节（信号层仍可计算）。"""
+    if not value:
+        return b""
+    clean = value.split(",", 1)[1] if "," in value else value
+    try:
+        return base64.b64decode(clean)
+    except Exception:
+        return b""
+
+
+def _maybe_transcribe(audio_bytes: bytes):
+    """
+    可选 ASR 转写：仅当配置了 ASR_API_URL 时才尝试（标准库 urllib，lazy）。
+    未配置或调用失败时如实返回 (None, asr_configured, note)，绝不返回预置话术。
+    """
+    endpoint = os.getenv("ASR_API_URL", "").strip()
+    if not endpoint:
+        return None, False, "未配置 ASR_API_URL，未进行转写，仅返回真实频谱特征"
+
+    api_key = os.getenv("ASR_API_KEY", "").strip()
+    try:
+        import json
+        import urllib.request
+
+        boundary = "----signalboundary"
+        head = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="file"; filename="audio.bin"\r\n'
+            f"Content-Type: application/octet-stream\r\n\r\n"
+        ).encode("utf-8")
+        tail = f"\r\n--{boundary}--\r\n".encode("utf-8")
+        body = head + audio_bytes + tail
+        headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        req = urllib.request.Request(endpoint, data=body, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            payload = json.loads(resp.read().decode("utf-8", "ignore"))
+        text = None
+        if isinstance(payload, dict):
+            data = payload.get("data")
+            text = payload.get("text") or payload.get("transcript")
+            if not text and isinstance(data, dict):
+                text = data.get("text") or data.get("transcript")
+        if text:
+            return str(text), True, "ASR 转写完成"
+        return None, True, "ASR 接口未返回转写文本"
+    except Exception as e:
+        return None, True, f"ASR 调用失败: {e}"
+
+
 # ========== 请求/响应模型 ==========
 
 class CrossImageRequest(BaseModel):
     text_input: str = Field(default="", description="用户文字描述")
-    image_descriptions: List[str] = Field(default_factory=list, description="各图片的视觉描述列表")
+    image_descriptions: List[str] = Field(default_factory=list, description="各图片的视觉描述列表（向后兼容）")
+    images_base64: List[str] = Field(default_factory=list, description="真实图片 base64 列表（新增能力，优先经视觉模型解析）")
     expected_is_fraud: Optional[bool] = Field(default=None, description="期望结果（用于评测记录）")
 
 
@@ -43,6 +110,7 @@ class CrossImageResponse(BaseModel):
 class AISynthesisRequest(BaseModel):
     media_type: str = Field(default="image", description="媒体类型: image/audio")
     description: str = Field(..., description="图片/音频描述")
+    media_base64: Optional[str] = Field(default=None, description="真实图片/音频 base64（新增，触发信号层融合）")
     expected_is_ai: Optional[bool] = Field(default=None, description="期望结果（用于评测记录）")
 
 
