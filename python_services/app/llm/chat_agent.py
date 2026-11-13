@@ -444,21 +444,28 @@ class ChatAgent:
         2. 反思输出：检查事实错误、意图误判、风险不当
         3. 如有问题，修正后返回
 
-        参数:
-            message: 用户消息
-            conversation_id: 对话ID
-            user_id: 用户ID（用于记录风险交互）
-            enable_reflection: 是否启用反思
+        return_details=True 时返回 {"response": str, "reflection": dict}，供 API 端点核验。
         """
         # 1. 基础对话
-        response = self.chat(message, conversation_id)
+        response = self.chat(message, conversation_id, user_id=user_id)
+
+        reflection_summary: Dict[str, Any] = {
+            "has_issues": False,
+            "issue_type": "跳过反思",
+            "issue_description": "",
+            "correction": "",
+            "confidence": 0,
+            "context_used": False,
+            "context_length": 0,
+        }
 
         # 2. 反思检查
         if not enable_reflection:
+            if return_details:
+                return {"response": response, "reflection": reflection_summary}
             return response
 
         try:
-            # 意图判定
             intent = self._detect_intent(message)
             context = _retrieve_context(message)  # contract c2：真实检索，失败降级空串
             reflection = reflection_engine.reflect(
