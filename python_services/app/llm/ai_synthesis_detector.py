@@ -11,9 +11,6 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from langchain_core.messages import HumanMessage
-from langchain_dashscope import ChatDashScope
-
 from app.llm.config import LLMConfig
 
 logger = logging.getLogger(__name__)
@@ -61,11 +58,31 @@ AI_SYNTHESIS_AUDIO_PROMPT = """你是 AI 语音合成检测专家。请分析以
 }}"""
 
 
+def _format_signal(signal: Optional[Dict[str, Any]]) -> str:
+    """把信号层真实数值特征格式化为文本，供语义判定参考。"""
+    if not signal:
+        return ""
+    parts: List[str] = ["【真实信号层特征（由媒体字节数值计算）】"]
+    for key in ("artifact_score", "synthesis_score"):
+        if key in signal:
+            parts.append(f"{key}={signal[key]}")
+    feats = signal.get("features", {})
+    for key in (
+        "laplacian_variance", "high_freq_energy_ratio", "block_boundary_ratio",
+        "edge_consistency", "channel_correlation_mean", "spectral_flatness",
+        "spectral_rolloff", "zero_crossing_rate_variance", "mfcc_variance",
+        "high_freq_energy_ratio", "backend",
+    ):
+        if key in feats:
+            parts.append(f"{key}={feats[key]}")
+    return " ".join(parts)
+
+
 class AISynthesisDetector:
     """AI 合成内容检测器"""
 
     def __init__(self):
-        self._model: Optional[ChatDashScope] = None
+        self._model: Optional[Any] = None
         self._metrics: Dict[str, Any] = {
             "total_detected": 0,
             "correct_detections": 0,
@@ -76,7 +93,7 @@ class AISynthesisDetector:
         }
 
     @property
-    def model(self) -> ChatDashScope:
+    def model(self) -> Any:
         if self._model is None:
             from langchain_dashscope import ChatDashScope
             self._model = ChatDashScope(
