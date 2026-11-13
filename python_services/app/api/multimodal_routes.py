@@ -150,6 +150,7 @@ async def detect_ai_synthesis(request: AISynthesisRequest) -> AISynthesisRespons
         analysis=result.get("analysis", ""),
         media_type=result.get("_media_type", request.media_type),
         latency_ms=result.get("_latency_ms", 0),
+        signal_features=result.get("signal_features"),
     )
 
 
@@ -161,11 +162,14 @@ async def classify_intent(request: IntentClassifyRequest) -> IntentClassifyRespo
     三模式意图识别：闲聊/咨询/反诈预警
     - 准确率目标：93%+
     """
-    result = intent_classifier.classify(request.user_message)
+    clf = _get_intent_classifier()
+    if clf is None:
+        raise HTTPException(status_code=503, detail="意图分类依赖当前不可用")
+    result = clf.classify(request.user_message)
 
     # 记录评测结果
     if request.expected_intent:
-        intent_classifier.record_result(
+        clf.record_result(
             predicted=result.get("intent", "chat"),
             expected=request.expected_intent,
             user_message=request.user_message,
