@@ -444,3 +444,43 @@ async def llm_stats() -> LLMStatsResponse:
     except Exception as e:
         logger.exception("获取 LLM 统计失败")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===================== 反思对话 / 监护人预警查询 =====================
+
+@router.post("/ai/chat/reflect", tags=["AI Chat"])
+async def ai_chat_reflect(request: ReflectChatRequest) -> Dict[str, Any]:
+    """带反思的 AI 对话：以真实检索上下文做事实一致性核对"""
+    try:
+        agent = _get_chat_agent()
+        result = agent.chat_with_reflection(
+            message=request.message,
+            conversation_id=request.conversation_id,
+            user_id=request.user_id,
+            enable_reflection=request.enable_reflection,
+            return_details=True,
+        )
+        return {
+            "success": True,
+            "response": result.get("response", ""),
+            "reflection": result.get("reflection", {}),
+            "conversation_id": request.conversation_id,
+        }
+    except Exception as e:
+        logger.exception("反思对话失败")
+        raise HTTPException(status_code=500, detail=f"反思对话失败: {str(e)}")
+
+
+@router.get("/ai/chat/guardian/alerts", tags=["AI Chat"])
+async def guardian_alert_events(
+    user_id: Optional[str] = None,
+    limit: int = 50,
+) -> Dict[str, Any]:
+    """查询已持久化的监护人预警事件（真实读取落盘记录）"""
+    try:
+        from app.notification.guardian_notifier import notifier
+        events = notifier.get_guardian_alert_events(user_id=user_id, limit=limit)
+        return {"success": True, "total": len(events), "alerts": events}
+    except Exception as e:
+        logger.exception("查询监护人预警事件失败")
+        raise HTTPException(status_code=500, detail=str(e))
