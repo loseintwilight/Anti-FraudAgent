@@ -172,13 +172,13 @@ async def classify_intent(request: IntentClassifyRequest) -> IntentClassifyRespo
         )
         try:
             metrics_tracker.record_eval_result("intent", {
-                "accuracy": intent_classifier.get_accuracy() * 100,
+                "accuracy": clf.get_accuracy() * 100,
             })
             metrics_tracker.save()
         except Exception:
             pass
 
-    intent_cn = intent_classifier.INTENT_LABELS_CN.get(result.get("intent", "chat"), "未知")
+    intent_cn = clf.INTENT_LABELS_CN.get(result.get("intent", "chat"), "未知")
 
     return IntentClassifyResponse(
         intent=result.get("intent", "chat"),
@@ -196,7 +196,8 @@ async def get_multimodal_metrics() -> MetricsResponse:
     """获取多模态识别引擎的综合指标"""
     cross_img_metrics = multimodal_engine.get_metrics()
     synthesis_metrics = ai_synthesis_detector.get_metrics()
-    intent_metrics = intent_classifier.get_metrics()
+    clf = _get_intent_classifier()
+    intent_metrics = clf.get_metrics() if clf is not None else {}
 
     return MetricsResponse(
         cross_image_accuracy=cross_img_metrics.get("cross_image_accuracy", 0),
