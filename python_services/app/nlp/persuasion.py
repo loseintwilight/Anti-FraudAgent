@@ -199,6 +199,16 @@ class PersuasionGenerator:
         group_key = _resolve_age_group(age_group)
         templates = AGE_GROUP_TEMPLATES.get(group_key, MIDDLE_TEMPLATES)
 
+        # 可选模型生成路径：有 API Key 且配置开启时启用，否则回落静态模板
+        model_config = _model_config()
+        if model_config is not None:
+            model_text = _generate_with_model(
+                fraud_type, group_key, user_name, model_config
+            )
+            if model_text:
+                logger.info("劝阻话术由模型生成完成")
+                return model_text
+
         # 获取对应诈骗类型的话术列表
         fraud_templates = templates.get(fraud_type)
 

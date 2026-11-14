@@ -1,18 +1,14 @@
 """
-集中式指标追踪系统
-所有简历中宣称的量化数字都在此记录和产出
-- 留痕迹记录数字的产出
-- 每个指标都有来源、计算方式和时间戳
+指标读取视图
+集中读取 evaluation/results/ 下由评测脚本产出的确定性评测结果。
+指标的唯一数据源是评测产物；缺失字段一律返回 None，不提供默认值。
 """
 from __future__ import annotations
 
 import json
 import logging
-import os
-import time
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
