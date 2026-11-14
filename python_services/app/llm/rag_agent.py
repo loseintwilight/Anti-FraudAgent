@@ -180,18 +180,19 @@ class RAGAgent:
                             f"召回率下降 {recall_decline:.2%} > 阈值 {threshold:.2%}，自动回滚！"
                         )
                         kb_mgr.restore_vector_store(backup_path)
-                        # 重置向量存储引用
-                        self._vector_store = None
+                        self._retriever = None
                         logger.warning("已回滚到更新前版本")
                         return 0
                     else:
                         logger.info(
-                            f"回归测试通过: 召回率 {before_recall:.2%} → {after_recall:.2%}"
+                            "回归测试通过: 召回率 %.2f%% → %.2f%%",
+                            before_recall * 100,
+                            after_recall * 100,
                         )
                 except Exception as e:
-                    logger.warning(f"回归测试失败: {e}")
+                    logger.warning("回归测试失败: %s", e)
 
-            return len(split_docs)
+            return count
 
         except Exception as e:
             logger.error("添加文档失败: %s", e)
