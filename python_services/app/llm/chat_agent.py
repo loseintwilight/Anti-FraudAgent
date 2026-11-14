@@ -176,7 +176,7 @@ class ChatAgent:
     # ========== 咨询模式匹配 ==========
 
     def _match_consultation(self, message: str) -> Optional[str]:
-        """匹配咨询知识库，返回固定答案或 None"""
+        """匹配咨询知识库，返回固定答案或 None（仅作兜底）"""
         if not message:
             return None
 
@@ -184,16 +184,156 @@ class ChatAgent:
 
         for rule in CONSULTATION_RULES:
             keywords_a, keywords_b, answer = rule
-            # 检查第一组关键词
             if not any(kw in msg for kw in keywords_a):
                 continue
-            # 检查第二组关键词（如果有）
             if keywords_b is not None:
                 if not any(kw in msg for kw in keywords_b):
                     continue
             return answer
 
         return None
+
+    # ========== 画像长期记忆 / 检索上下文 / 工具解析 ==========
+
+    def _build_profile_context(self, profile: Any) -> str:
+        """把长期记忆里的用户画像转成给模型的补充上下文（不向用户透露标签）。"""
+        recent = profile.detection_history[-3:] if profile.detection_history else []
+        recent_types = [r.get("type", "") for r in recent if r.get("type")]
+        return (
+            "当前用户的长期画像信息如下，仅供你做语气、风险敏感度与角色适配，"
+            "不要在回复中提及这些画像标签或本段说明：\n"
+            f"- 人群角色: {profile.fraud_role}\n"
+            f"- 年龄组: {profile.age_group}\n"
+            f"- 历史检测次数: {profile.total_detections}\n"
+            f"- 高风险次数: {profile.high_risk_count}，极高风险次数: {profile.critical_risk_count}\n"
+            f"- 风险偏好指数: {profile.risk_preference:.2f}\n"
+            f"- 近期涉及的诈骗类型: {recent_types or '无'}\n"
+            f"- 是否已绑定监护人: {'是' if profile.guardian_contact else '否'}"
+        )
+
+    def _build_system_messages(
+        self,
+        conversation_id: str,
+        user_id: Optional[str],
+        query: str,
+        with_retrieval: bool = True,
+    ) -> List[BaseMessage]:
+        """构建系统消息：基础提示词 + 画像长期记忆 + 真实检索上下文。"""
+        messages: List[BaseMessage] = [SystemMessage(content=SYSTEM_PROMPT)]
+
+        # 1) 画像长期记忆接入普通对话
+        try:
+            profile_key = user_id or conversation_id
+            profile = memory_manager.get_profile(profile_key)
+            messages.append(SystemMessage(content=self._build_profile_context(profile)))
+        except Exception as e:
+            logger.warning(f"读取用户画像失败，跳过画像上下文: {e}")
+
+        # 2) 反诈知识库真实检索上下文（失败时降级为空串，不注入）
+        if with_retrieval:
+            context = _retrieve_context(query)
+            if context:
+                messages.append(SystemMessage(
+                    content=(
+                        "以下为从反诈知识库实时检索到的参考上下文，请据此核对事实并作答；"
+                        "若你已有的说法与检索结果冲突，以检索结果为准：\n"
+                        f"{context[:2000]}"
+                    )
+                ))
+
+        return messages
+
+    def _infer_profile_role(self, message: str) -> Optional[str]:
+        """从用户自述的身份/年龄线索推断高危人群角色，用于更新长期画像。"""
+        msg = message.strip()
+        for role, keywords in HIGH_RISK_ROLE_HINTS:
+            if any(kw in msg for kw in keywords):
+                return role
+        return None
+
+    def _assess_risk(self, message: str) -> Tuple[str, float]:
+        """基于关键词的风险等级判定，返回 (风险等级, 风险分)。"""
+        if any(kw in message for kw in ["转账", "汇款", "安全账户", "冻结", "通缉令"]):
+            return "critical", 0.9
+        if any(kw in message for kw in ["投资", "刷单", "验证码", "贷款", "杀猪盘"]):
+            return "high", 0.7
+        return "mid", 0.5
+
+    def _post_chat_profile_update(self, profile_key: str, message: str) -> None:
+        """对话后更新长期画像；画像命中高危角色且本轮高危时触发监护人预警。"""
+        try:
+            intent = self._detect_intent(message)
+            if intent != "反诈预警":
+                return
+
+            role = self._infer_profile_role(message)
+            if role:
+                memory_manager.update_profile(
+                    profile_key,
+                    fraud_role=role,
+                    age_group="young" if role in {"child", "student"} else "elderly",
+                )
+
+            risk_level, risk_score = self._assess_risk(message)
+            fraud_type = self._detect_fraud_type(message)
+            memory_manager.add_detection_record(
+                user_id=profile_key,
+                fraud_type=fraud_type,
+                risk_level=risk_level,
+                risk_score=risk_score,
+                summary=message[:100],
+            )
+
+            profile = memory_manager.get_profile(profile_key)
+            from app.notification.guardian_notifier import (
+                NOTIFY_FRAUD_ROLES, NOTIFY_RISK_LEVELS, notifier,
+            )
+            if profile.fraud_role in NOTIFY_FRAUD_ROLES and risk_level in NOTIFY_RISK_LEVELS:
+                result = notifier.notify(
+                    user_id=profile_key,
+                    risk_level=risk_level,
+                    fraud_type=fraud_type,
+                    fraud_role=profile.fraud_role,
+                    risk_score=risk_score,
+                    report_summary=message[:100],
+                )
+                logger.info(
+                    f"监护人预警触发: user={profile_key}, role={profile.fraud_role}, "
+                    f"level={risk_level}, channels={result.get('channels')}"
+                )
+        except Exception as e:
+            logger.error(f"更新画像/触发监护人预警失败: {e}")
+
+    @staticmethod
+    def _extract_tool_calls(response: Any) -> List[Dict[str, Any]]:
+        """统一解析 LangChain 标准 tool_calls 与 DashScope/OpenAI 原始格式。"""
+        calls: List[Dict[str, Any]] = []
+        standard = getattr(response, "tool_calls", None)
+        if standard:
+            for c in standard:
+                calls.append({
+                    "name": c.get("name", ""),
+                    "args": c.get("args", {}) or {},
+                    "id": c.get("id") or f"call_{len(calls)}",
+                })
+            return calls
+
+        kwargs = getattr(response, "additional_kwargs", {}) or {}
+        for c in kwargs.get("tool_calls", []) or []:
+            func = c.get("function", {}) or {}
+            raw_args = func.get("arguments", "{}")
+            try:
+                args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
+            except (json.JSONDecodeError, TypeError):
+                args = {}
+            if not isinstance(args, dict):
+                args = {}
+            calls.append({
+                "name": func.get("name", ""),
+                "args": args,
+                "id": c.get("id") or f"call_{len(calls)}",
+            })
+        return calls
 
     # ========== 基础对话 ==========
 
