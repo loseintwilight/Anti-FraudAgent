@@ -31,9 +31,6 @@ NOTIFICATION_DIR.mkdir(parents=True, exist_ok=True)
 class GuardianNotifier:
     """监护人通知器"""
 
-    MAX_RETRIES = 3
-    RETRY_BACKOFF = [2, 5, 10]  # 重试间隔（秒）
-
     def __init__(self):
         self._bindings: Dict[str, GuardianBinding] = {}
         self._notification_log: List[Dict[str, Any]] = []
@@ -130,7 +127,11 @@ class GuardianNotifier:
         risk_score: float = 0,
         report_summary: str = "",
     ) -> Dict[str, Any]:
-        """发送监护人通知"""
+        """触发监护人预警。
+
+        外部通道（短信/邮件）仅在已配置并注册时真实发送；无论外部是否接通，
+        站内消息都会真实落盘为一条预警事件（channel=internal），可查询，不伪装成已发送短信。
+        """
         if not self.should_notify(risk_level, fraud_role):
             return {
                 "notified": False,
@@ -138,21 +139,26 @@ class GuardianNotifier:
             }
 
         guardian = self.get_guardian(user_id)
-        if not guardian:
-            logger.warning(f"用户 {user_id} 未绑定监护人，跳过通知")
-            return {
-                "notified": False,
-                "reason": "用户未绑定监护人",
-            }
-
-        notification_content = self._build_notification_content(
-            guardian_name=guardian.guardian_name,
-            relation=guardian.relation,
+        guardian_name = guardian.guardian_name if guardian else ""
+        content = self._build_notification_content(
+            guardian_name=guardian_name,
+            relation=guardian.relation if guardian else "",
             fraud_type=fraud_type,
             risk_level=risk_level,
             risk_score=risk_score,
             report_summary=report_summary,
         )
+
+        meta = {
+            "event_type": "guardian_alert",
+            "risk_level": risk_level,
+            "fraud_type": fraud_type,
+            "fraud_role": fraud_role,
+            "risk_score": risk_score,
+            "guardian_name": guardian_name,
+            "guardian_phone": guardian.guardian_phone if guardian else "",
+            "guardian_email": guardian.guardian_email if guardian else "",
+        }
 
         start_time = time.time()
         dispatch_results: List[Dict[str, Any]] = []
