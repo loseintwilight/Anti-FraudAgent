@@ -201,20 +201,19 @@ class ChatAgent:
         self,
         message: str,
         conversation_id: str = "default",
+        user_id: Optional[str] = None,
     ) -> str:
         """
-        基础对话（无工具、无RAG）
+        基础对话（画像长期记忆 + 检索上下文，无工具）
 
         参数:
             message: 用户消息
             conversation_id: 对话ID
+            user_id: 用户ID（用于长期画像，缺省时用 conversation_id）
 
         返回:
             AI 回复文本
         """
-        if not LLMConfig.validate():
-            return "AI 服务未配置（DASHSCOPE_API_KEY 缺失），请先配置 API Key"
-
         if not message or not message.strip():
             return "请输入您的问题"
 
