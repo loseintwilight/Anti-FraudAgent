@@ -144,21 +144,28 @@ class RAGAgent:
                         f"安全模式: 更新前召回率={before_recall:.2%}, 备份={backup_path}"
                     )
                 except Exception as e:
-                    logger.warning(f"备份失败，跳过安全模式: {e}")
+                    logger.warning("备份失败，跳过安全模式: %s", e)
 
-            docs = []
-            for doc in documents:
-                docs.append(Document(
-                    page_content=doc.get("text", ""),
-                    metadata=doc.get("metadata", {}),
-                ))
+            # 文本分割 + 编码 + 写入 Qdrant
+            from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-            # 文本分割
-            text_splitter = RecursiveCharacterTextSplitter(
+            splitter = RecursiveCharacterTextSplitter(
                 chunk_size=500,
                 chunk_overlap=50,
             )
-            split_docs = text_splitter.split_documents(docs)
+            embedder = self.embedding_model
+            payloads = []
+            for doc in documents:
+                text = doc.get("text", "") or ""
+                metadata = doc.get("metadata", {}) or {}
+                for chunk in splitter.split_text(text):
+                    payloads.append(
+                        {
+                            "text": chunk,
+                            "metadata": metadata,
+                            "embedding": embedder.embed(chunk),
+                        }
+                    )
 
             count = upsert_documents(payloads)
             logger.info("成功写入 %d 个文档块到向量存储", count)
