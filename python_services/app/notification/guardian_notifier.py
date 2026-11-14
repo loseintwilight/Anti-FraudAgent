@@ -155,31 +155,35 @@ class GuardianNotifier:
         )
 
         start_time = time.time()
-        notified = False
-        last_error = ""
+        dispatch_results: List[Dict[str, Any]] = []
 
-        for attempt in range(self.MAX_RETRIES + 1):
-            try:
-                if guardian.guardian_phone:
-                    send_sms(guardian.guardian_phone, notification_content)
-                if guardian.guardian_email:
-                    send_email(guardian.guardian_email, notification_content)
-                notified = True
-                break
-            except Exception as e:
-                last_error = str(e)
-                logger.warning(f"通知发送失败 (尝试 {attempt+1}/{self.MAX_RETRIES+1}): {last_error}")
-                if attempt < self.MAX_RETRIES:
-                    sleep_time = self.RETRY_BACKOFF[attempt]
-                    logger.info(f"重试等待 {sleep_time}s...")
-                    time.sleep(sleep_time)
+        # 1) 外部通道：仅在监护人绑定了联系方式时尝试，未配置会如实返回 channel=internal
+        if guardian and guardian.guardian_phone:
+            dispatch_results.append(
+                send_sms(guardian.guardian_phone, content, user_id=user_id, meta=meta)
+            )
+        if guardian and guardian.guardian_email:
+            dispatch_results.append(
+                send_email(guardian.guardian_email, content, user_id=user_id, meta=meta)
+            )
+
+        # 2) 站内消息：始终真实落盘，作为该预警事件的持久化与可查询记录
+        internal_result = send_internal_message(user_id=user_id, content=content, meta=meta)
+        dispatch_results.append(internal_result)
+
+        channels = sorted({r.get("channel", "internal") for r in dispatch_results})
+        external_sent = any(
+            r.get("sent") and r.get("channel") in {"sms", "email", "phone"}
+            for r in dispatch_results
+        )
+        internal_delivered = bool(internal_result.get("sent"))
 
         latency = (time.time() - start_time) * 1000
         record = {
             "user_id": user_id,
-            "guardian_name": guardian.guardian_name,
-            "guardian_phone": guardian.guardian_phone,
+            "guardian_name": guardian_name,
             "fraud_type": fraud_type,
+            "fraud_role": fraud_role,
             "risk_level": risk_level,
             "risk_score": risk_score,
             "channels": channels,
