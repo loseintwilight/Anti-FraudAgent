@@ -47,6 +47,13 @@ class LLMConfig:
         "VECTOR_STORE_PATH",
         str(Path(__file__).resolve().parent.parent.parent / "chroma_db"),
     )
+    # 远程 Qdrant 地址，留空则使用上面的本地持久化路径
+    QDRANT_URL: str = os.getenv("QDRANT_URL", "")
+    # 集合名称
+    QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "anti_fraud_kb")
+
+    # 兼容既有 import：指向同一 Qdrant 持久化目录
+    VECTOR_STORE_PATH: str = QDRANT_PATH
 
     @classmethod
     def validate(cls) -> bool:

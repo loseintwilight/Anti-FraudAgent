@@ -9,7 +9,7 @@ import logging
 import re
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import BaseTool
 from langchain_dashscope import ChatDashScope
 
@@ -20,6 +20,34 @@ from app.llm.memory import memory_manager
 from app.llm.tools import get_all_tools
 
 logger = logging.getLogger(__name__)
+
+# 工具调用最大轮次上限（防止模型无限循环调用工具）
+MAX_TOOL_ROUNDS = 5
+
+# 高危人群自述线索：仅用于把长期画像更新为对应角色，不用于截断或生成回复
+HIGH_RISK_ROLE_HINTS = (
+    ("child", ["小学生", "上小学", "初中生", "未成年", "我是小孩", "我家孩子", "我儿子", "我女儿", "儿童"]),
+    ("elderly", ["退休", "老年人", "老大爷", "老大妈", "我孙子", "我孙女", "上年纪", "岁数大", "七旬", "八旬"]),
+    ("student", ["我是学生", "大学生", "高中生", "在校学生", "校园贷"]),
+)
+
+# 知识库检索降级状态（S1 的 hybrid 模块并行开发中，可能暂不可用）
+_retrieval_unavailable_logged = False
+
+
+def _retrieve_context(query: str, k: int = 3) -> str:
+    """按 S1 契约 c2 获取真实检索上下文；模块缺失 / 检索失败时降级为空串并打日志。"""
+    global _retrieval_unavailable_logged
+    try:
+        from app.vector_store.hybrid import retrieve_context
+        return retrieve_context(query, k=k) or ""
+    except Exception as e:
+        if not _retrieval_unavailable_logged:
+            logger.warning(f"知识库检索暂不可用，对话/反思链路降级为空上下文: {e}")
+            _retrieval_unavailable_logged = True
+        else:
+            logger.debug(f"知识库检索暂不可用: {e}")
+        return ""
 
 
 # ========== 系统提示词 ==========
@@ -68,9 +96,9 @@ Q: 我怎么了 → A: 其实你没"怎么了"，只是情绪累了、心里有�
 4. 如果用户问题不涉及「我遇到了」「有人让我」「收到」等个人遭遇描述，则判定为咨询模式
 
 【咨询模式回答要求——必须严格遵守】
-1. 【强制】必须优先匹配下方【咨询知识库】中的问答对，找到相似问题后直接使用对应的回答，一字不改
-2. 【强制】如果用户问题中包含咨询知识库中的关键词，必须使用对应回答，禁止自创回答
-3. 【强制】直接输出知识库原文答案，只输出一句话定义，不要扩展、不要额外补充任何内容
+1. 优先依据系统提供的【反诈知识库检索上下文】与下方【咨询知识库】作答，二者不一致时以检索上下文为准做事实核对
+2. 结合检索到的真实资料与自身知识给出准确、简洁的知识性回答，不要编造知识库中没有的案例、法规、建议
+3. 只输出一句话定义或核心结论，不要扩展、不要额外补充与问题无关的内容
 4. 【强制】回答中绝对不能出现任何风险提醒、防范建议、避坑要点、行动建议等附加内容
 5. 【强制】回答中绝对不能出现「⚠️ 风险提醒」「💡 防范建议」等标签或类似内容
 6. 【强制】回答中绝对不能出现「记住以下几点」「第一、第二、第三」等列举式内容
