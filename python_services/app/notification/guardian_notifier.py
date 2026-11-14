@@ -1,7 +1,7 @@
 """
 监护人通知器
 当系统检测到儿童/老年用户触发高风险时，自动通知绑定监护人
-- 风险触发 → 绑定查询 → SMS/Email 推送 → 3 次重试 → 日志记录
+- 风险触发 → 绑定查询 → 外部通道尽力发送 + 站内消息真实落盘 → 持久化预警事件
 """
 from __future__ import annotations
 
@@ -13,7 +13,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.notification.models import GuardianBinding
-from app.notification.senders import send_sms, send_email
+from app.notification.senders import (
+    send_sms,
+    send_email,
+    send_internal_message,
+    list_internal_messages,
+    get_channel_status,
+)
 
 logger = logging.getLogger(__name__)
 
