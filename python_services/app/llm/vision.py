@@ -53,8 +53,9 @@ class VisionAnalyzer:
         self._model: Optional[ChatDashScope] = None
 
     @property
-    def model(self) -> ChatDashScope:
+    def model(self) -> Any:
         if self._model is None:
+            from langchain_dashscope import ChatDashScope
             self._model = ChatDashScope(
                 model=LLMConfig.VISION_MODEL,
                 dashscope_api_key=LLMConfig.DASHSCOPE_API_KEY,
@@ -99,7 +100,8 @@ class VisionAnalyzer:
             # 使用提示词
             user_prompt = prompt or VISION_PROMPT
 
-            # 构建消息（支持多模态内容）
+            # 构建消息（支持多模态内容）；重依赖在此处才加载
+            from langchain_core.messages import HumanMessage
             msg = HumanMessage(
                 content=[
                     {"type": "text", "text": user_prompt},
@@ -130,3 +132,36 @@ class VisionAnalyzer:
                 "text": "图片内容分析中遇到问题，请尝试手动描述图片内容。",
                 "error": str(e),
             }
+
+    def describe_image(
+        self,
+        image_base64: str,
+        prompt: Optional[str] = None,
+    ) -> str:
+        """
+        返回单张图片的文字描述（复用视觉模型调用）。
+        模型不可用 / 未配置 Key / 返回空结果时返回空串，绝不返回预置话术。
+        """
+        result = self.analyze_image(image_base64, prompt=prompt)
+        return result.get("text", "") if result.get("success") else ""
+
+    def analyze_frames(
+        self,
+        frames_base64: List[str],
+        prompt: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """逐帧分析视频帧列表，复用单图视觉模型调用。"""
+        out: List[Dict[str, Any]] = []
+        for idx, frame in enumerate(frames_base64):
+            result = self.analyze_image(frame, prompt=prompt)
+            out.append({
+                "index": idx,
+                "success": bool(result.get("success")),
+                "text": result.get("text", ""),
+                "error": result.get("error"),
+            })
+        return out
+
+
+# 全局单例（构造轻量，模型仅在首次调用时才加载）
+vision_analyzer = VisionAnalyzer()
