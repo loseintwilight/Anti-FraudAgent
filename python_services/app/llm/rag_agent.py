@@ -298,12 +298,10 @@ class RAGAgent:
     def get_stats(self) -> Dict[str, Any]:
         """获取 RAG 统计信息"""
         try:
-            count = 0
-            if self.vector_store is not None:
-                count = self.vector_store._collection.count()
+            count = collection_count()
             return {
-                "vector_store_path": LLMConfig.VECTOR_STORE_PATH,
-                "document_count": count,
+                "vector_store_path": LLMConfig.QDRANT_PATH,
+                "document_count": count if count is not None else 0,
                 "collection": DEFAULT_COLLECTION,
                 "api_key_configured": bool(LLMConfig.DASHSCOPE_API_KEY),
             }
