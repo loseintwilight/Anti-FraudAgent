@@ -182,27 +182,29 @@ class GuardianNotifier:
             "fraud_type": fraud_type,
             "risk_level": risk_level,
             "risk_score": risk_score,
-            "notified": notified,
-            "error": last_error if not notified else "",
+            "channels": channels,
+            "external_sent": external_sent,
+            "notified": internal_delivered,
             "latency_ms": round(latency, 2),
             "timestamp": datetime.now().isoformat(),
         }
         self._notification_log.append(record)
         self._save_notification_log()
 
-        if notified:
-            logger.info(
-                f"监护人通知成功: user={user_id}, guardian={guardian.guardian_name}, "
-                f"type={fraud_type}, latency={latency:.0f}ms"
-            )
-        else:
-            logger.error(f"监护人通知失败: user={user_id}, error={last_error}")
+        logger.info(
+            f"监护人预警已处理: user={user_id}, level={risk_level}, "
+            f"channels={channels}, external_sent={external_sent}, "
+            f"internal_delivered={internal_delivered}"
+        )
 
         return {
-            "notified": notified,
-            "guardian_name": guardian.guardian_name,
+            "notified": internal_delivered,
+            "channels": channels,
+            "external_sent": external_sent,
+            "guardian_name": guardian_name,
             "latency_ms": latency,
-            "error": last_error if not notified else "",
+            "error": "" if internal_delivered else "站内消息落盘失败",
+            "channel_status": get_channel_status(),
         }
 
     def _build_notification_content(
