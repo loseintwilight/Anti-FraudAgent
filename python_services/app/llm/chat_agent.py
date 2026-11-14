@@ -278,19 +278,33 @@ class ChatAgent:
 
             all_tools = get_all_tools()
             history = self.memory.get_langchain_messages(conversation_id, limit=10)
-
-            messages = [
-                SystemMessage(content=SYSTEM_PROMPT),
+            messages: List[BaseMessage] = [
+                *self._build_system_messages(conversation_id, user_id, message),
                 *history,
                 HumanMessage(content=message),
             ]
-
-            # 使用模型绑定工具
             model_with_tools = self.model.bind_tools(all_tools)
-            response = model_with_tools.invoke(messages)
 
-            result = response.content if response.content else ""
-            tool_calls = response.additional_kwargs.get("tool_calls", [])
+            final_text = ""
+            for round_idx in range(MAX_TOOL_ROUNDS):
+                response = model_with_tools.invoke(messages)
+                tool_calls = self._extract_tool_calls(response)
+                if not tool_calls:
+                    final_text = response.content if response.content else ""
+                    break
+
+                logger.info(f"工具调用第 {round_idx + 1} 轮，共 {len(tool_calls)} 个调用")
+                standard_calls = [
+                    {"name": c["name"], "args": c["args"], "id": c["id"]}
+                    for c in tool_calls
+                ]
+                if getattr(response, "tool_calls", None):
+                    messages.append(response)
+                else:
+                    messages.append(AIMessage(
+                        content=response.content or "",
+                        tool_calls=standard_calls,
+                    ))
 
                 for c in tool_calls:
                     tool = tool_map.get(c["name"])
