@@ -59,6 +59,7 @@ class MultimodalEngine:
     @property
     def model(self) -> ChatDashScope:
         if self._model is None:
+            from langchain_dashscope import ChatDashScope
             self._model = ChatDashScope(
                 model=LLMConfig.CHAT_MODEL,
                 dashscope_api_key=LLMConfig.DASHSCOPE_API_KEY,
@@ -67,17 +68,56 @@ class MultimodalEngine:
             )
         return self._model
 
+    @staticmethod
+    def _describe_images(images_base64: List[str]) -> List[str]:
+        """
+        把真实图片 base64 列表转成文字描述：
+        - 优先复用 vision.py 的视觉模型调用；
+        - 模型不可用/未配置 Key 时，用信号层对图片字节算出的真实数值特征降级为摘要。
+        """
+        from app.llm.vision import vision_analyzer
+        from app.llm.signal_detection import analyze_image_artifacts
+
+        out: List[str] = []
+        for idx, value in enumerate(images_base64):
+            b64 = _clean_base64(value)
+            text = vision_analyzer.describe_image(b64)
+            if text:
+                out.append(f"图片{idx + 1}视觉描述: {text[:800]}")
+                continue
+            try:
+                raw = base64.b64decode(b64)
+            except Exception:
+                raw = b""
+            sig = analyze_image_artifacts(raw)
+            feats = sig.get("features", {})
+            out.append(
+                "图片%d信号层特征(视觉模型不可用): artifact_score=%.4f, "
+                "laplacian_variance=%s, high_freq_energy_ratio=%s, "
+                "block_boundary_ratio=%s, channel_correlation_mean=%s" % (
+                    idx + 1,
+                    sig.get("artifact_score", 0.0),
+                    feats.get("laplacian_variance"),
+                    feats.get("high_freq_energy_ratio"),
+                    feats.get("block_boundary_ratio"),
+                    feats.get("channel_correlation_mean"),
+                )
+            )
+        return out
+
     def analyze_cross_image(
         self,
         text_input: str,
         image_descriptions: List[str],
+        images_base64: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         跨图关联分析
 
         参数:
             text_input: 用户文字描述
-            image_descriptions: 各图片的视觉描述列表
+            image_descriptions: 各图片的视觉描述列表（向后兼容保留）
+            images_base64: 真实图片 base64 列表（可选，新增能力）
 
         返回:
             分析结果字典
