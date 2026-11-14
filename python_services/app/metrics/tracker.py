@@ -16,20 +16,77 @@ from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
-# 指标存储目录
-METRICS_DIR = Path(__file__).resolve().parent.parent.parent / "metrics_data"
-METRICS_DIR.mkdir(parents=True, exist_ok=True)
+# 评测产物目录（results/*.json 是唯一指标数据源）
+RESULTS_DIR = Path(__file__).resolve().parent.parent.parent / "evaluation" / "results"
+
+# 汇总报告文件不参与指标合并
+_REPORT_FILENAME = "metrics_report.json"
+
+
+def _read_result_files() -> Dict[str, Dict[str, Any]]:
+    """读取 results 目录下所有评测产物，返回 {文件名: 内容}。"""
+    out: Dict[str, Dict[str, Any]] = {}
+    if not RESULTS_DIR.is_dir():
+        return out
+    for path in sorted(RESULTS_DIR.glob("*.json")):
+        if path.name == _REPORT_FILENAME:
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, ValueError) as e:
+            logger.warning("评测产物读取失败: %s (%s)", path.name, e)
+            continue
+        if isinstance(data, dict):
+            out[path.name] = data
+    return out
+
+
+def _collect_metrics() -> Dict[str, Any]:
+    """合并所有评测产物中的 metrics 字段。"""
+    merged: Dict[str, Any] = {}
+    for data in _read_result_files().values():
+        metrics = data.get("metrics")
+        if isinstance(metrics, dict):
+            for key, value in metrics.items():
+                merged[key] = value
+    return merged
+
+
+def _insufficient_reasons() -> Dict[str, str]:
+    """汇总各产物中标注为数据不足的原因。"""
+    reasons: Dict[str, str] = {}
+    for data in _read_result_files().values():
+        insufficient = data.get("insufficient")
+        if isinstance(insufficient, dict):
+            reasons.update(
+                {k: v for k, v in insufficient.items() if isinstance(v, str)}
+            )
+    return reasons
+
+
+def _knowledge_entries() -> Optional[int]:
+    """知识条目数取自向量库实际 count；客户端不可用 / 空库返回 None。"""
+    try:
+        from app.vector_store.hybrid import collection_count
+    except Exception:
+        return None
+    try:
+        count = collection_count()
+    except Exception:
+        return None
+    return count if isinstance(count, int) else None
 
 
 class MetricsTracker:
-    """集中式指标追踪器 — 简历中所有数字的单一来源"""
+    """评测产物驱动的指标视图：只读取 results/*.json，缺字段返回 None。"""
 
-    def __init__(self):
-        self._metrics: Dict[str, Any] = self._load_metrics()
-        self._session_start = time.time()
+    def __init__(self) -> None:
+        self._results_dir = RESULTS_DIR
 
-    def _metrics_file(self) -> Path:
-        return METRICS_DIR / "project_metrics.json"
+    def get_metric(self, name: str) -> Any:
+        """取单个指标；不存在返回 None。"""
+        return _collect_metrics().get(name)
 
     def get_all_metrics(self) -> Dict[str, Any]:
         """返回所有真实存在的指标；知识条目数按向量库实际 count 注入。"""
