@@ -194,27 +194,23 @@ class RAGAgent:
             return len(split_docs)
 
         except Exception as e:
-            logger.error(f"添加文档失败: {e}")
+            logger.error("添加文档失败: %s", e)
             return 0
 
     def search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
         """检索相关文档"""
-        if self.retriever is None:
-            return []
-
         try:
-            docs = self.retriever.invoke(query, k=k)
-            results = []
-            for doc in docs:
-                results.append({
-                    "text": doc.page_content,
-                    "metadata": doc.metadata,
-                    "score": doc.metadata.get("score", 0.0),
-                })
-            return results
-
+            docs = self.retriever.retrieve(query, top_k=k)
+            return [
+                {
+                    "text": d["page_content"],
+                    "metadata": d["metadata"],
+                    "score": d["score"],
+                }
+                for d in docs
+            ]
         except Exception as e:
-            logger.error(f"检索失败: {e}")
+            logger.error("检索失败: %s", e)
             return []
 
     def chat_with_rag(
