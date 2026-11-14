@@ -12,7 +12,34 @@ from typing import Callable
 from app.llm.tool_fault.config import TOOL_TIMEOUTS, TOOL_RETRY_CONFIG
 from app.llm.tool_fault.tracker import tracker
 
-logger = logging.getLogger(__name__)
+try:
+    from app.llm.tool_fault.config import TOOL_TIMEOUTS, TOOL_RETRY_CONFIG
+    from app.llm.tool_fault.tracker import tracker
+except Exception as e:  # 包 __init__ 依赖缺失的 tracker 实例时，使用内置等效配置与追踪器
+    logger.warning(f"tool_fault 配置/追踪器不可用，启用内置降级: {e}")
+    TOOL_TIMEOUTS = {"default": 10}
+    TOOL_RETRY_CONFIG = {"max_retries": 1, "backoff_base": 1.0, "backoff_multiplier": 2.0}
+
+    class _FallbackTracker:
+        def __init__(self):
+            self.executed_ids = {}
+            self.failure_log = []
+
+        def is_duplicate(self, execution_id):
+            return execution_id in self.executed_ids
+
+        def mark_executed(self, execution_id):
+            self.executed_ids[execution_id] = time.time()
+
+        def log_failure(self, tool_name, execution_id, error, context):
+            self.failure_log.append({
+                "tool_name": tool_name,
+                "execution_id": execution_id,
+                "error": error,
+                "context": context,
+            })
+
+    tracker = _FallbackTracker()
 
 
 def with_tool_fault_tolerance(tool_name: str):
@@ -69,5 +96,7 @@ def with_tool_fault_tolerance(tool_name: str):
 
             return {"error": "unknown", "message": "未知错误"}
 
+        # 保留原函数签名：便于被 LangChain @tool 等依赖签名的装饰器继续包装
+        wrapper.__signature__ = inspect.signature(func)
         return wrapper
     return decorator
