@@ -146,6 +146,8 @@ class ReflectionEngine:
                 }
 
             result["original_output"] = agent_output
+            result["context_used"] = context_available
+            result["context_length"] = context_length
 
             if result.get("has_issues"):
                 logger.warning(
@@ -166,6 +168,8 @@ class ReflectionEngine:
                 "correction": "",
                 "confidence": 0,
                 "original_output": agent_output,
+                "context_used": context_available,
+                "context_length": context_length,
             }
 
     def reflect_and_correct(

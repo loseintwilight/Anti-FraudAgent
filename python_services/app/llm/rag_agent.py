@@ -1,6 +1,6 @@
 """
 RAG 检索增强生成模块
-基于 LangChain + ChromaDB 实现，替代 Spring AI 的 RAG 配置
+基于 Qdrant + 混合检索（BM25 + 向量 → RRF → 可选精排）实现知识检索增强的对话。
 """
 import logging
 from typing import Any, Dict, List, Optional
