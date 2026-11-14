@@ -110,14 +110,78 @@ def get_adaptive_boost(fraud_type: str, age: int) -> float:
     return type_boosts.get(age_group, 1.0)
 
 
+def normalize_case_type(fraud_type: Optional[str]) -> str:
+    """将案件类型规范化到配置表键；未登记类型回落到 default（中性）。"""
+    if not fraud_type:
+        return "default"
+    key = str(fraud_type).strip()
+    if key in CASE_TYPE_DIMENSION_FACTORS:
+        return key
+    return CASE_TYPE_ALIASES.get(key, "default")
+
+
+def _full_factors(partial: Dict[str, float]) -> Dict[str, float]:
+    """把稀疏系数补齐为 8 维完整字典，未登记维度按 1.0（中性）处理。"""
+    return {dim: float(partial.get(dim, 1.0)) for dim in DIMENSION_KEYS}
+
+
+def get_age_dimension_factors(age: int) -> Dict[str, float]:
+    """获取某年龄组的逐维度权重系数。"""
+    return _full_factors(AGE_DIMENSION_FACTORS.get(get_age_group(age), {}))
+
+
+def get_case_type_factors(fraud_type: Optional[str]) -> Dict[str, float]:
+    """获取某案件类型的逐维度权重系数（未登记类型返回全 1.0）。"""
+    return _full_factors(
+        CASE_TYPE_DIMENSION_FACTORS.get(normalize_case_type(fraud_type), {})
+    )
+
+
+def compute_weight_adjustments(
+    age: int, fraud_type: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    计算作用于各维度权重的调整系数（供 scorer 与人群基础权重相乘）。
+
+    合并系数 = 年龄组逐维度系数 × 案件类型逐维度系数 × 案件×年龄综合系数。
+    返回完整调整详情，applied 表示是否存在非 1.0 的命中系数。
+    """
+    age_group = get_age_group(age)
+    case_type = normalize_case_type(fraud_type)
+    boost = get_adaptive_boost(case_type, age)
+
+    age_factors = get_age_dimension_factors(age)
+    case_factors = get_case_type_factors(case_type)
+    combined_factors = {
+        dim: age_factors[dim] * case_factors[dim] * boost
+        for dim in DIMENSION_KEYS
+    }
+    applied = any(abs(v - 1.0) > 1e-9 for v in combined_factors.values())
+
+    return {
+        "age": age,
+        "age_group": age_group,
+        "fraud_type": fraud_type,
+        "case_type": case_type,
+        "age_boost_coefficient": boost,
+        "age_factors": age_factors,
+        "case_type_factors": case_factors,
+        "combined_factors": combined_factors,
+        "applied": applied,
+    }
+
+
 def apply_age_adaptive_boost(confidence: float, fraud_type: str, age: int) -> float:
     """
-    应用年龄自适应调权
-    返回调整后的置信度（上限 1.0）
+    应用自适应权重调整，返回作用于权重的等效结果。
+
+    保留既有签名以兼容外部调用：第一个参数作为基值，
+    内部改为基于逐维度权重调整系数产出结果（不再截断到 1.0）。
     """
-    boost = get_adaptive_boost(fraud_type, age)
-    boosted = confidence * boost
-    return min(boosted, 1.0)
+    adjustments = compute_weight_adjustments(age, fraud_type)
+    combined = adjustments["combined_factors"]
+    scalar = sum(combined.values()) / len(combined)
+    return confidence * scalar
 
 
 def get_boost_detail(fraud_type: str, age: int) -> dict:
