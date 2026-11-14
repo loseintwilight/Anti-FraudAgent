@@ -241,11 +241,17 @@ class ChatAgent:
             response = self.model.invoke(messages)
             result = response.content if response.content else ""
 
-            # 保存对话历史
-            self.memory.add_message(conversation_id, HumanMessage(content=message))
-            self.memory.add_message(conversation_id, AIMessage(content=result))
+            # 兜底：仅在正常链路无结果时才使用固定答案
+            fallback = self._match_consultation(message)
+            if fallback:
+                self.memory.add_message(conversation_id, HumanMessage(content=message))
+                self.memory.add_message(conversation_id, AIMessage(content=fallback))
+                self._post_chat_profile_update(user_id or conversation_id, message)
+                return fallback
 
-            return result
+            if not LLMConfig.validate():
+                return "AI 服务未配置（DASHSCOPE_API_KEY 缺失），请先配置 API Key"
+            return "AI 服务暂不可用，请稍后重试"
 
         except Exception as e:
             logger.error(f"对话失败: {e}", exc_info=True)
@@ -257,9 +263,10 @@ class ChatAgent:
         self,
         message: str,
         conversation_id: str = "default",
+        user_id: Optional[str] = None,
     ) -> str:
         """
-        带工具调用的对话
+        带工具调用的对话（有最大轮次上限的多轮循环）
 
         工具执行结果作为 ToolMessage 回灌模型，由模型决定是否继续调用工具。
         """
