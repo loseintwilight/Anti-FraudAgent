@@ -1,12 +1,26 @@
 """
-通知发送器：SMS / Email 双通道
+通知发送器
+- 站内消息：真实落盘（notifications/internal_messages.json），可按用户查询
+- 外部通道（SMS / Email / Phone）：可插拔 sender 接口 + 环境变量配置项。
+  未注册外部 sender 或开关未配置时，如实标注 channel=internal，
+  不伪装成已发送短信 / 已拨打电话
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
+import threading
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# 站内消息落盘目录（运行时创建）
+NOTIFICATIONS_DIR = Path(__file__).resolve().parent.parent.parent / "notifications"
+NOTIFICATIONS_DIR.mkdir(parents=True, exist_ok=True)
+INTERNAL_MESSAGES_FILE = NOTIFICATIONS_DIR / "internal_messages.json"
 
 _write_lock = threading.Lock()
 
