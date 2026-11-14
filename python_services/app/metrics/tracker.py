@@ -31,65 +31,36 @@ class MetricsTracker:
     def _metrics_file(self) -> Path:
         return METRICS_DIR / "project_metrics.json"
 
-    def _load_metrics(self) -> Dict[str, Any]:
-        """加载已有指标"""
-        mf = self._metrics_file()
-        if mf.exists():
-            try:
-                with open(mf, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                pass
-        return self._init_metrics_template()
+    def get_all_metrics(self) -> Dict[str, Any]:
+        """返回所有真实存在的指标；知识条目数按向量库实际 count 注入。"""
+        metrics = _collect_metrics()
+        metrics["knowledge_entries"] = _knowledge_entries()
+        return metrics
 
-    def _init_metrics_template(self) -> Dict[str, Any]:
-        """初始化指标模板"""
+    def generate_report(self) -> Dict[str, Any]:
+        """只呈现评测产物里真实存在的结果，缺失项标注数据不足。"""
+        metrics = self.get_all_metrics()
+        reasons = _insufficient_reasons()
+        reasons.setdefault(
+            "knowledge_entries", "向量库不可用或为空，collection_count() 返回 None"
+        )
+        measured = {k: v for k, v in metrics.items() if v is not None}
+        insufficient = {
+            k: reasons.get(k, "评测产物中该指标为 null，无原始实验日志支撑")
+            for k, v in metrics.items()
+            if v is None
+        }
         return {
-            "project": "AI反诈大师 - 多模态智能反诈助手系统",
-            "last_updated": datetime.now().isoformat(),
-            # 1. 多模态识别
-            "multimodal": {
-                "cross_image_accuracy": {"value": 0.0, "target": 89.0, "unit": "%", "source": "evaluation/multimodal_eval.py"},
-                "ai_synthesis_detection_rate": {"value": 0.0, "target": 85.0, "unit": "%", "source": "app/llm/ai_synthesis_detector.py"},
-                "intent_accuracy": {"value": 0.0, "target": 93.0, "unit": "%", "source": "app/llm/intent_classifier.py"},
-                "sse_first_token_latency_ms": {"value": 0.0, "target": 1500, "unit": "ms", "source": "app/llm/chat_agent.py"},
-            },
-            # 2. RAG知识库
-            "rag": {
-                "recall_at_5_baseline": {"value": 62.0, "unit": "%", "source": "evaluation/rag_eval.py", "note": "原始查询召回率"},
-                "recall_at_5_optimized": {"value": 85.0, "unit": "%", "source": "evaluation/rag_eval.py", "note": "查询改写+历史感知+多路召回后"},
-                "recall_improvement": {"value": 23.0, "unit": "个百分点", "source": "evaluation/rag_eval.py"},
-                "noise_filter_rate": {"value": 90.0, "target": 90.0, "unit": "%", "source": "app/crawler/keyword_filter.py"},
-                "vector_update_time_reduction": {"value": 60.0, "target": 60.0, "unit": "%", "source": "app/crawler/progress_manager.py"},
-                "knowledge_entries": {"value": 100, "target": 100, "unit": "条", "source": "app/llm/rag_agent.py"},
-                "population_categories": {"value": 5, "target": 5, "unit": "类", "source": "app/llm/rag_agent.py"},
-            },
-            # 3. 风险引擎
-            "risk_engine": {
-                "top1_classification_accuracy": {"value": 0.0, "target": 88.0, "unit": "%", "source": "evaluation/risk_engine_eval.py"},
-                "dimensions": {"value": 8, "unit": "个", "source": "app/risk_engine/scorer.py"},
-                "risk_levels": {"value": 4, "unit": "个", "source": "app/risk_engine/scorer.py"},
-                "persuasion_acceptance_improvement": {"value": 0.0, "target": 40.0, "unit": "%", "source": "evaluation/risk_engine_eval.py"},
-            },
-            # 4. Agent智能体
-            "agent": {
-                "tool_call_success_rate": {"value": 0.0, "target": 95.0, "unit": "%", "source": "app/llm/tool_fault/tracker.py"},
-                "tool_types": {"value": 6, "unit": "类", "source": "app/llm/tools.py"},
-                "misjudgment_reduction": {"value": 0.0, "target": 25.0, "unit": "%", "source": "app/llm/reflection/engine.py"},
-                "hallucination_reduction": {"value": 0.0, "target": 60.0, "unit": "%", "source": "evaluation/agent_eval.py"},
-                "guardian_notification_latency_ms": {"value": 0.0, "target": 10000, "unit": "ms", "source": "app/notification/guardian_notifier.py"},
-            },
-            # 历史记录
-            "history": [],
+            "measured": measured,
+            "insufficient": insufficient,
+            "sources": sorted(_read_result_files().keys()),
         }
 
-    def update_metric(self, category: str, metric_name: str, value: Union[float, int], note: str = ""):
-        """更新单个指标"""
-        if category in self._metrics:
-            if metric_name in self._metrics[category]:
-                old_value = self._metrics[category][metric_name].get("value", 0)
-                self._metrics[category][metric_name]["value"] = value
-                self._metrics[category][metric_name]["last_updated"] = datetime.now().isoformat()
+    # --- 兼容既有调用：指标源为评测产物，运行时写入不改变指标源 ---
+    def update_metric(
+        self, category: str, metric_name: str, value: Any, note: str = ""
+    ) -> None:
+        logger.debug("指标源为评测产物: %s/%s", category, metric_name)
 
     def record_eval_result(self, eval_name: str, metrics: Dict[str, Any]) -> None:
         logger.debug("指标源为评测产物: %s", eval_name)
