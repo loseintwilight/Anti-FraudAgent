@@ -219,27 +219,28 @@ class ChatAgent:
             return "请输入您的问题"
 
         try:
-            # 先尝试匹配咨询知识库
-            consultation_answer = self._match_consultation(message)
-            if consultation_answer:
-                logger.info("咨询模式匹配成功，返回固定答案")
-                self.memory.add_message(conversation_id, HumanMessage(content=message))
-                self.memory.add_message(conversation_id, AIMessage(content=consultation_answer))
-                return consultation_answer
-
-            # 获取历史消息
             history = self.memory.get_langchain_messages(conversation_id, limit=10)
-
-            # 构建消息列表
             messages = [
-                SystemMessage(content=SYSTEM_PROMPT),
+                *self._build_system_messages(conversation_id, user_id, message),
                 *history,
                 HumanMessage(content=message),
             ]
 
-            # 调用 LLM
-            response = self.model.invoke(messages)
-            result = response.content if response.content else ""
+            # 优先走正常模型 + 检索链路
+            if LLMConfig.validate():
+                try:
+                    response = self.model.invoke(messages)
+                    result = response.content if response.content else ""
+                    if result.strip():
+                        self.memory.add_message(conversation_id, HumanMessage(content=message))
+                        self.memory.add_message(conversation_id, AIMessage(content=result))
+                        self._post_chat_profile_update(user_id or conversation_id, message)
+                        return result
+                    logger.warning("模型返回空内容，转入咨询知识库兜底")
+                except Exception as e:
+                    logger.error(f"模型调用失败，转入咨询知识库兜底: {e}")
+            else:
+                logger.info("LLM 未配置，转入咨询知识库兜底")
 
             # 兜底：仅在正常链路无结果时才使用固定答案
             fallback = self._match_consultation(message)
