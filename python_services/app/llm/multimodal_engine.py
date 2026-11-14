@@ -85,6 +85,11 @@ class MultimodalEngine:
         start_time = time.time()
         self._metrics["total_requests"] += 1
 
+        # 新增能力：真实图片先经视觉模型（或信号层降级）转成描述，再与文字描述合并
+        if images_base64:
+            resolved = self._describe_images(images_base64)
+            image_descriptions = list(image_descriptions) + resolved
+
         if len(image_descriptions) <= 1:
             return {
                 "is_fraud": False,
@@ -105,6 +110,7 @@ class MultimodalEngine:
                 image_descriptions=images_text[:2000],
             )
 
+            from langchain_core.messages import HumanMessage
             response = self.model.invoke([HumanMessage(content=prompt)])
             result_text = response.content if response.content else ""
 

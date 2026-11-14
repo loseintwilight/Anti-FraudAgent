@@ -42,10 +42,10 @@ class LLMConfig:
     # 最大 Token 数
     MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "2048"))
 
-    # 向量存储路径
-    VECTOR_STORE_PATH: str = os.getenv(
-        "VECTOR_STORE_PATH",
-        str(Path(__file__).resolve().parent.parent.parent / "chroma_db"),
+    # 向量存储路径（Qdrant 本地持久化）
+    QDRANT_PATH: str = os.getenv(
+        "QDRANT_PATH",
+        str(Path(__file__).resolve().parent.parent.parent / "qdrant_db"),
     )
     # 远程 Qdrant 地址，留空则使用上面的本地持久化路径
     QDRANT_URL: str = os.getenv("QDRANT_URL", "")
