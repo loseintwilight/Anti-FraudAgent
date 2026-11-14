@@ -133,15 +133,18 @@ class RAGAgent:
         try:
             # 安全模式：更新前备份
             backup_path = ""
+            before_recall = 0.0
             if safe_mode:
                 try:
                     from evaluation.kb_version_manager import KnowledgeBaseManager
+
                     kb_mgr = KnowledgeBaseManager()
-                    before_result = kb_mgr.run_regression_test()
-                    before_recall = before_result["avg_recall"]
+                    before_recall = kb_mgr.run_regression_test()["avg_recall"]
                     backup_path = kb_mgr.backup_vector_store()
                     logger.info(
-                        f"安全模式: 更新前召回率={before_recall:.2%}, 备份={backup_path}"
+                        "安全模式: 更新前召回率=%.2f%%, 备份=%s",
+                        before_recall * 100,
+                        backup_path,
                     )
                 except Exception as e:
                     logger.warning("备份失败，跳过安全模式: %s", e)
