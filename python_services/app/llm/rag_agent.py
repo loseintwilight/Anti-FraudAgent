@@ -160,24 +160,25 @@ class RAGAgent:
             )
             split_docs = text_splitter.split_documents(docs)
 
-            # 添加到向量存储
-            self.vector_store.add_documents(split_docs)
-            logger.info(f"成功添加 {len(split_docs)} 个文档块到向量存储")
+            count = upsert_documents(payloads)
+            logger.info("成功写入 %d 个文档块到向量存储", count)
 
             # 安全模式：更新后回归测试
             if safe_mode and backup_path:
                 try:
                     from evaluation.kb_version_manager import KnowledgeBaseManager
+
                     kb_mgr = KnowledgeBaseManager()
-                    after_result = kb_mgr.run_regression_test()
-                    after_recall = after_result["avg_recall"]
+                    after_recall = kb_mgr.run_regression_test()["avg_recall"]
 
                     recall_decline = before_recall - after_recall
                     threshold = 0.15  # 召回率下降超过15%时回滚
 
                     if recall_decline > threshold:
                         logger.error(
-                            f"召回率下降 {recall_decline:.2%} > 阈值 {threshold:.2%}，自动回滚！"
+                            "召回率下降 %.2f%% > 阈值 %.2f%%，自动回滚！",
+                            recall_decline * 100,
+                            threshold * 100,
                         )
                         kb_mgr.restore_vector_store(backup_path)
                         self._retriever = None
