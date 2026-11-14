@@ -2,27 +2,21 @@
 RAG 检索增强生成模块
 基于 LangChain + ChromaDB 实现，替代 Spring AI 的 RAG 配置
 """
-
 import logging
 from typing import Any, Dict, List, Optional
 
-from langchain.chains import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains.history_aware_retriever import create_history_aware_retriever
-from langchain.chains import create_history_aware_retriever
-from langchain.schema import BaseRetriever
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_chroma import Chroma
-from langchain_core.documents import Document
-from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.vectorstores import VectorStoreRetriever
-from langchain_dashscope import DashScopeEmbeddings, ChatDashScope
+from langchain_dashscope import ChatDashScope
 
 from app.llm.config import LLMConfig
 from app.llm.chat_memory import FileChatMemory
-from app.llm.memory import memory_manager as kb_memory_manager
+from app.vector_store.embedder import TextEmbedder
+from app.vector_store.hybrid import (
+    HybridRetriever,
+    collection_count,
+    upsert_documents,
+)
 
 logger = logging.getLogger(__name__)
 
