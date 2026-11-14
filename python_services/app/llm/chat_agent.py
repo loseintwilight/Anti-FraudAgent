@@ -261,22 +261,15 @@ class ChatAgent:
         """
         带工具调用的对话
 
-        参数:
-            message: 用户消息
-            conversation_id: 对话ID
+        工具执行结果作为 ToolMessage 回灌模型，由模型决定是否继续调用工具。
         """
         if not LLMConfig.validate():
-            return "AI 服务未配置（DASHSCOPE_API_KEY 缺失）"
+            fallback = self._match_consultation(message)
+            return fallback or "AI 服务未配置（DASHSCOPE_API_KEY 缺失）"
 
         try:
-            # 先尝试匹配咨询知识库
-            consultation_answer = self._match_consultation(message)
-            if consultation_answer:
-                self.memory.add_message(conversation_id, HumanMessage(content=message))
-                self.memory.add_message(conversation_id, AIMessage(content=consultation_answer))
-                return consultation_answer
-
             all_tools = get_all_tools()
+            tool_map = {t.name: t for t in all_tools}
             history = self.memory.get_langchain_messages(conversation_id, limit=10)
             messages: List[BaseMessage] = [
                 *self._build_system_messages(conversation_id, user_id, message),
