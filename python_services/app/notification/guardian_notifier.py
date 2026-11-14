@@ -252,6 +252,19 @@ class GuardianNotifier:
         """获取最近的通知记录"""
         return self._notification_log[-limit:]
 
+    def get_guardian_alert_events(
+        self,
+        user_id: str = None,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """查询已持久化的监护人预警事件（读取站内消息真实落盘记录）。"""
+        records = list_internal_messages(user_id=user_id, limit=1000)
+        events = [
+            r for r in records
+            if (r.get("meta") or {}).get("event_type") == "guardian_alert"
+        ]
+        return events[:max(1, limit)]
+
 
 # 全局实例
 notifier = GuardianNotifier()

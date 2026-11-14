@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from typing import Dict, List
+import os
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +155,74 @@ AGE_GROUP_MAP = [
     (26, 50, "middle"),
     (51, 150, "elderly"),
 ]
+
+
+# ========== 可选模型生成路径 ==========
+# 仅在同时满足「配置了 API Key」与「显式开启开关」时启用；否则一律回落静态模板。
+PERSUASION_LLM_SWITCH = "PERSUASION_USE_LLM"
+PERSUASION_LLM_MODEL_ENV = "PERSUASION_LLM_MODEL"
+DEFAULT_PERSUASION_MODEL = "qwen-plus"
+
+# 人群语气差异（供模型生成时区分人群）
+GROUP_TONE = {
+    "young": "面向年轻人，语气活泼，可用网络用语，直接点破套路。",
+    "middle": "面向中年人，语气理性，讲事实讲道理，条理清晰。",
+    "elderly": "面向老年人，语气亲切，语重心长，用简单直白的话。",
+}
+
+
+def _model_config() -> Optional[Dict[str, str]]:
+    """读取可选模型配置：需同时具备 API Key 与开启开关，否则返回 None。"""
+    enabled = os.getenv(PERSUASION_LLM_SWITCH, "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+    api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("DASH_SCOPE_API_KEY", "")
+    if not enabled or not api_key:
+        return None
+    return {
+        "api_key": api_key,
+        "model": os.getenv(PERSUASION_LLM_MODEL_ENV, DEFAULT_PERSUASION_MODEL),
+    }
+
+
+def _generate_with_model(
+    fraud_type: str,
+    group_key: str,
+    user_name: str,
+    config: Dict[str, str],
+) -> Optional[str]:
+    """调用模型生成人群差异化劝阻话术；依赖缺失或调用异常均返回 None 以回落模板。"""
+    try:
+        from langchain_core.messages import HumanMessage, SystemMessage
+        from langchain_dashscope import ChatDashScope
+    except ImportError:
+        logger.info("劝阻话术模型依赖不可用，回落静态模板")
+        return None
+    try:
+        system_prompt = (
+            "你是反诈劝阻话术生成助手。生成一段口语化、简短（不超过80字）、"
+            "可直接用于劝阻潜在受害者的中文话术，不要解释、不要编号。"
+            + GROUP_TONE.get(group_key, GROUP_TONE["middle"])
+        )
+        who = f"，用户称呼为「{user_name}」" if user_name else ""
+        human_prompt = (
+            f"诈骗类型：{fraud_type}；目标人群：{group_key}{who}。请给出劝阻话术。"
+        )
+        llm = ChatDashScope(
+            model=config["model"],
+            dashscope_api_key=config["api_key"],
+            temperature=0.7,
+            max_tokens=200,
+        )
+        response = llm.invoke([
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=human_prompt),
+        ])
+        text = (getattr(response, "content", "") or "").strip()
+        return text or None
+    except Exception as e:
+        logger.warning(f"劝阻话术模型生成失败，回落静态模板：{e}")
+        return None
 
 
 def _resolve_age_group(age_group: str) -> str:
