@@ -97,6 +97,9 @@ class ReflectionEngine:
                 "original_output": str,
             }
         """
+        context_available = bool(context and context.strip())
+        context_length = len(context) if context else 0
+
         if not LLMConfig.validate():
             return {
                 "has_issues": False,
@@ -105,7 +108,16 @@ class ReflectionEngine:
                 "correction": "",
                 "confidence": 1.0,
                 "original_output": agent_output,
+                "context_used": False,
+                "context_length": context_length,
             }
+
+        # 事实一致性核对必须以传入的检索上下文为准绳；无上下文时明确告知模型不得臆断
+        context_block = (
+            context[:2000]
+            if context_available
+            else "无可用检索上下文（本次未获取到知识库检索结果，请勿臆断事实一致性）"
+        )
 
         try:
             prompt = ChatPromptTemplate.from_messages([
@@ -117,7 +129,7 @@ class ReflectionEngine:
                 "user_message": user_message[:500],
                 "intent": intent,
                 "agent_output": agent_output[:1000],
-                "context": context[:500] if context else "无知识库上下文",
+                "context": context_block,
             })
 
             result_text = response.content if response.content else ""
