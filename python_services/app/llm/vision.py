@@ -6,10 +6,7 @@
 
 import base64
 import logging
-from typing import Any, Dict, Optional
-
-from langchain_core.messages import HumanMessage
-from langchain_dashscope import ChatDashScope
+from typing import Any, Dict, List, Optional
 
 from app.llm.config import LLMConfig
 
@@ -50,7 +47,8 @@ class VisionAnalyzer:
     """
 
     def __init__(self):
-        self._model: Optional[ChatDashScope] = None
+        # 重依赖延迟加载：类型标注用 Any，避免在模块导入时引用未安装的 SDK
+        self._model: Optional[Any] = None
 
     @property
     def model(self) -> Any:

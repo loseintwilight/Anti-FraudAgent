@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import router
+from app.api.multimodal_routes import router as multimodal_router
 
 # 创建 FastAPI 实例
 app = FastAPI(
@@ -29,6 +30,8 @@ app.add_middleware(
 
 # 注册所有 API 路由
 app.include_router(router, prefix="/api/v1")
+# 挂载多模态路由（跨图/合成检测/意图分类/指标 + 信号层/音频/视频帧）
+app.include_router(multimodal_router, prefix="/api/v1")
 
 
 @app.get("/", tags=["Root"])
