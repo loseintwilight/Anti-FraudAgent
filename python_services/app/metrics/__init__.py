@@ -1,6 +1,6 @@
 """
-指标追踪系统
-集中记录简历中所有量化数字，每个指标有来源、计算方式、时间戳
+指标读取系统
+指标由 evaluation/results/ 下的确定性评测产物提供，缺字段返回 None
 """
 from app.metrics.tracker import MetricsTracker, metrics_tracker
 
