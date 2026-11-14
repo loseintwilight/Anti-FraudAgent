@@ -3,14 +3,14 @@
 """
 from __future__ import annotations
 
+import inspect
 import logging
 import time
 import uuid
 from functools import wraps
 from typing import Callable
 
-from app.llm.tool_fault.config import TOOL_TIMEOUTS, TOOL_RETRY_CONFIG
-from app.llm.tool_fault.tracker import tracker
+logger = logging.getLogger(__name__)
 
 try:
     from app.llm.tool_fault.config import TOOL_TIMEOUTS, TOOL_RETRY_CONFIG

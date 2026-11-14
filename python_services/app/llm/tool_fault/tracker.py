@@ -42,3 +42,7 @@ class ToolCallTracker:
             "total_failures": len(self.failure_log),
             "recent_failures": self.failure_log[-10:] if self.failure_log else [],
         }
+
+
+# 包级单例，供 app.llm.tool_fault 导出
+tracker = ToolCallTracker()
