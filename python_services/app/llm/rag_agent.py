@@ -70,35 +70,19 @@ class RAGAgent:
     @property
     def embedding_model(self) -> DashScopeEmbeddings:
         if self._embedding_model is None:
-            self._embedding_model = DashScopeEmbeddings(
-                model=LLMConfig.EMBEDDING_MODEL,
-                dashscope_api_key=LLMConfig.DASHSCOPE_API_KEY,
-            )
+            self._embedding_model = TextEmbedder()
         return self._embedding_model
 
     @property
-    def vector_store(self) -> Optional[Chroma]:
-        if self._vector_store is None:
-            try:
-                self._vector_store = Chroma(
-                    collection_name=DEFAULT_COLLECTION,
-                    embedding_function=self.embedding_model,
-                    persist_directory=LLMConfig.VECTOR_STORE_PATH,
-                )
-                logger.info(f"ChromaDB 向量存储已加载: {LLMConfig.VECTOR_STORE_PATH}")
-            except Exception as e:
-                logger.warning(f"加载 ChromaDB 失败: {e}，RAG 功能将不可用")
-                self._vector_store = None
-        return self._vector_store
+    def retriever(self) -> HybridRetriever:
+        if self._retriever is None:
+            self._retriever = HybridRetriever()
+        return self._retriever
 
     @property
-    def retriever(self) -> Optional[BaseRetriever]:
-        if self._retriever is None and self.vector_store is not None:
-            self._retriever = self.vector_store.as_retriever(
-                search_type="similarity",
-                search_kwargs={"k": 5},
-            )
-        return self._retriever
+    def vector_store(self):
+        """兼容旧接口：返回混合检索器（Qdrant 客户端由 hybrid 单例持有）"""
+        return self.retriever
 
     @property
     def memory(self) -> FileChatMemory:
@@ -106,8 +90,8 @@ class RAGAgent:
             self._memory = FileChatMemory()
         return self._memory
 
-    def rewrite_query(self, question: str) -> str:
-        """重写查询以提高检索效果"""
+    def rewrite_query(self, question: str, history=None) -> str:
+        """结合对话历史重写查询以提高检索效果"""
         if not LLMConfig.validate():
             return question
 
