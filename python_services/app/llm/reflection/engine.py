@@ -1,7 +1,7 @@
 """
 Agent 反思机制
 在 Agent 输出后自动复查，检查是否存在：
-- 事实错误（幻觉）
+- 事实错误（幻觉）—— 以传入的知识库检索上下文为准绳做一致性核对
 - 意图误判
 - 风险等级不当
 - 知识库使用不当
@@ -35,7 +35,10 @@ REFLECTION_PROMPT = """你是一个反诈 Agent 的质量审核员。请审视�
 {context}
 
 【审核标准】
-1. 事实检查：Agent 输出中是否有编造的信息？是否与知识库上下文矛盾？
+1. 事实一致性核对（核心）：把【Agent 输出】中的事实性陈述逐条与【知识库上下文】比对。
+   - 若上下文是真实检索结果：凡与上下文矛盾、或上下文无依据却被当作确定事实输出的内容，判为"事实错误"，
+     并在 correction 中给出与检索上下文一致的修正版本；
+   - 若上下文标注为"无可用检索上下文"：不得据此臆断输出与知识库矛盾，跳过事实一致性判定，改查其余各项。
 2. 意图检查：Agent 的意图判定是否准确？是否误判了闲聊/咨询/诈骗？
 3. 风险检查：如果涉及诈骗，风险等级判定是否恰当？
 4. 合规检查：闲聊模式是否错误出现了反诈内容？咨询模式是否错误出现了风险警告？
@@ -85,7 +88,7 @@ class ReflectionEngine:
             user_message: 用户原始消息
             agent_output: Agent 输出
             intent: 意图判定结果
-            context: 知识库上下文
+            context: 知识库检索上下文（真实检索结果；为空时如实跳过事实一致性核对）
 
         返回:
             {
@@ -95,6 +98,8 @@ class ReflectionEngine:
                 "correction": str,
                 "confidence": float,
                 "original_output": str,
+                "context_used": bool,
+                "context_length": int,
             }
         """
         context_available = bool(context and context.strip())
