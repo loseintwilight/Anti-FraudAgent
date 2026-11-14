@@ -112,22 +112,29 @@ class RAGAgent:
             return question
 
         try:
-            prompt = ChatPromptTemplate.from_messages([
-                ("human", QUERY_REWRITE_PROMPT.format(question=question)),
-            ])
-            chain = prompt | self.chat_model
-            response = chain.invoke({})
+            history_text = ""
+            if history:
+                history_text = "\n".join(
+                    str(getattr(m, "content", m)) for m in history[-4:]
+                )
+            prompt_text = QUERY_REWRITE_PROMPT.replace("{question}", question)
+            if history_text:
+                prompt_text = f"对话历史：\n{history_text}\n\n{prompt_text}"
+
+            # 直接发消息，避免把用户问题里的花括号当成模板变量解析
+            response = self.chat_model.invoke(
+                [HumanMessage(content=prompt_text)]
+            )
             rewritten = response.content.strip() if response.content else question
-            logger.info(f"查询重写: {question[:30]} -> {rewritten[:30]}")
+            logger.info("查询重写: %s -> %s", question[:30], rewritten[:30])
             return rewritten
         except Exception as e:
-            logger.warning(f"查询重写失败: {e}，使用原始查询")
+            logger.warning("查询重写失败: %s，使用原始查询", e)
             return question
 
     def add_documents(self, documents: List[Dict[str, Any]], safe_mode: bool = True) -> int:
         """添加文档到向量存储（支持安全模式：备份+回归测试+自动回滚）"""
-        if self.vector_store is None:
-            logger.warning("向量存储不可用，无法添加文档")
+        if not documents:
             return 0
 
         try:
