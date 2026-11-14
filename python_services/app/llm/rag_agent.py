@@ -27,7 +27,7 @@ from app.llm.memory import memory_manager as kb_memory_manager
 logger = logging.getLogger(__name__)
 
 # 默认集合名称
-DEFAULT_COLLECTION = "anti_fraud_articles"
+DEFAULT_COLLECTION = LLMConfig.QDRANT_COLLECTION
 
 # 查询重写提示词
 QUERY_REWRITE_PROMPT = """你是一个专业的反诈查询重写助手。请根据用户的问题和对话历史，重写查询以使其更适合检索。
@@ -46,14 +46,13 @@ QUERY_REWRITE_PROMPT = """你是一个专业的反诈查询重写助手。请根
 class RAGAgent:
     """
     RAG 检索增强生成代理
-    基于 LangChain + ChromaDB 实现知识检索增强的对话
+    基于 Qdrant + 混合检索实现知识检索增强的对话
     """
 
     def __init__(self):
         self._chat_model: Optional[ChatDashScope] = None
-        self._embedding_model: Optional[DashScopeEmbeddings] = None
-        self._vector_store: Optional[Chroma] = None
-        self._retriever: Optional[BaseRetriever] = None
+        self._embedding_model: Optional[TextEmbedder] = None
+        self._retriever: Optional[HybridRetriever] = None
         self._memory: Optional[FileChatMemory] = None
 
     @property
@@ -68,7 +67,8 @@ class RAGAgent:
         return self._chat_model
 
     @property
-    def embedding_model(self) -> DashScopeEmbeddings:
+    def embedding_model(self) -> TextEmbedder:
+        """本地嵌入器（入库与查询共用，保证向量维度一致）"""
         if self._embedding_model is None:
             self._embedding_model = TextEmbedder()
         return self._embedding_model
