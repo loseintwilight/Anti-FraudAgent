@@ -292,29 +292,39 @@ class ChatAgent:
             result = response.content if response.content else ""
             tool_calls = response.additional_kwargs.get("tool_calls", [])
 
-            # 处理工具调用
-            if tool_calls:
-                for tc in tool_calls:
-                    func_name = tc.get("function", {}).get("name", "")
-                    func_args_str = tc.get("function", {}).get("arguments", "{}")
-                    try:
-                        func_args = json.loads(func_args_str) if isinstance(func_args_str, str) else func_args_str
-                        for tool in all_tools:
-                            if tool.name == func_name:
-                                tool_result = tool.invoke(func_args)
-                                result += f"\n\n[工具调用: {func_name}]\n{tool_result}"
-                                break
-                    except json.JSONDecodeError:
-                        logger.warning(f"工具参数解析失败: {func_name}")
+                for c in tool_calls:
+                    tool = tool_map.get(c["name"])
+                    if tool is None:
+                        tool_result: Any = f"未找到工具: {c['name']}"
+                    else:
+                        try:
+                            tool_result = tool.invoke(c["args"])
+                        except Exception as e:
+                            logger.warning(f"工具 {c['name']} 执行异常: {e}")
+                            tool_result = {"error": "tool_execution_failed", "message": str(e)}
+                    messages.append(ToolMessage(
+                        content=str(tool_result),
+                        tool_call_id=c["id"],
+                    ))
+
+                final_text = response.content or ""
+            else:
+                logger.warning(f"工具调用达到最大轮次 {MAX_TOOL_ROUNDS}，停止循环")
+
+            if not final_text.strip():
+                fallback = self._match_consultation(message)
+                if fallback:
+                    final_text = fallback
 
             self.memory.add_message(conversation_id, HumanMessage(content=message))
-            self.memory.add_message(conversation_id, AIMessage(content=result))
-
-            return result
+            self.memory.add_message(conversation_id, AIMessage(content=final_text))
+            self._post_chat_profile_update(user_id or conversation_id, message)
+            return final_text
 
         except Exception as e:
             logger.error(f"带工具对话失败: {e}", exc_info=True)
-            return f"对话处理失败: {str(e)}"
+            fallback = self._match_consultation(message)
+            return fallback or f"对话处理失败: {str(e)}"
 
     # ========== 流式对话 ==========
 
@@ -322,6 +332,7 @@ class ChatAgent:
         self,
         message: str,
         conversation_id: str = "default",
+        user_id: Optional[str] = None,
     ) -> AsyncIterator[str]:
         """
         流式对话
