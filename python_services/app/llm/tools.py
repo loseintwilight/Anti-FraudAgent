@@ -3,6 +3,7 @@ LangChain 工具定义
 替代 Spring AI 的 ToolCallback 工具注册
 """
 
+import importlib.util
 import json
 import logging
 import os
@@ -15,6 +16,27 @@ from langchain_core.tools import BaseTool, tool
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+
+def _load_fault_decorator():
+    """加载工具容错装饰器。
+
+    tool_fault 包的 __init__ 依赖 tracker.py 中缺失的模块级 tracker 实例，
+    直接 import 会失败；故失败时按文件路径加载自包含的 decorator.py。
+    """
+    try:
+        from app.llm.tool_fault.decorator import with_tool_fault_tolerance
+        return with_tool_fault_tolerance
+    except Exception as e:
+        logger.warning(f"tool_fault 包不可用，按文件加载容错装饰器: {e}")
+        path = os.path.join(os.path.dirname(__file__), "tool_fault", "decorator.py")
+        spec = importlib.util.spec_from_file_location("_s3_fault_decorator", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.with_tool_fault_tolerance
+
+
+with_tool_fault_tolerance = _load_fault_decorator()
 
 
 # ========== 工具参数 Schema ==========
@@ -53,6 +75,7 @@ class TerminalOperationInput(BaseModel):
 # ========== 工具实现 ==========
 
 @tool("file_operation", args_schema=FileOperationInput)
+@with_tool_fault_tolerance("file_operation")
 def file_operation(
     operation: str,
     path: str,
@@ -93,6 +116,7 @@ def file_operation(
 
 
 @tool("pdf_generation", args_schema=PDFGenerationInput)
+@with_tool_fault_tolerance("pdf_generation")
 def pdf_generation(
     title: str,
     content: str,
