@@ -151,6 +151,7 @@ def pdf_generation(
 
 
 @tool("web_search", args_schema=WebSearchInput)
+@with_tool_fault_tolerance("web_search")
 def web_search(query: str, num_results: int = 5) -> str:
     """搜索互联网信息"""
     try:
@@ -201,6 +202,7 @@ def web_search(query: str, num_results: int = 5) -> str:
 
 
 @tool("web_scraping", args_schema=WebScrapingInput)
+@with_tool_fault_tolerance("web_scraping")
 def web_scraping(url: str) -> str:
     """抓取网页内容"""
     try:
@@ -231,6 +233,7 @@ def web_scraping(url: str) -> str:
 
 
 @tool("terminal_operation", args_schema=TerminalOperationInput)
+@with_tool_fault_tolerance("terminal_operation")
 def terminal_operation(command: str, timeout: int = 30) -> str:
     """执行终端命令"""
     try:
@@ -257,6 +260,7 @@ def terminal_operation(command: str, timeout: int = 30) -> str:
 
 
 @tool("terminate")
+@with_tool_fault_tolerance("terminate")
 def terminate() -> str:
     """终止当前任务"""
     return "任务已终止"
