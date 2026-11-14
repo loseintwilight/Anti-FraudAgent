@@ -274,25 +274,27 @@ class RAGAgent:
             return answer
 
         except Exception as e:
-            logger.error(f"RAG 对话失败: {e}", exc_info=True)
+            logger.error("RAG 对话失败: %s", e, exc_info=True)
             return f"对话处理失败: {str(e)}"
 
     def _chat_without_rag(self, message: str, conversation_id: str) -> str:
         """无 RAG 的普通对话"""
         try:
-            history = self.memory.get_langchain_messages(conversation_id, limit=10)
-            messages = [HumanMessage(content=message)]
+            history = self.memory.get_langchain_messages(
+                conversation_id, limit=10
+            )
+            messages = history + [HumanMessage(content=message)]
             response = self.chat_model.invoke(messages)
 
             result = response.content if response.content else ""
 
             self.memory.add_message(conversation_id, HumanMessage(content=message))
-            self.memory.add_message(conversation_id, type(result))
+            self.memory.add_message(conversation_id, AIMessage(content=result))
 
             return result
 
         except Exception as e:
-            logger.error(f"普通对话失败: {e}")
+            logger.error("普通对话失败: %s", e)
             return f"对话处理失败: {str(e)}"
 
     def get_stats(self) -> Dict[str, Any]:
