@@ -11,9 +11,6 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from langchain_core.messages import HumanMessage
-from langchain_dashscope import ChatDashScope
-
 from app.llm.config import LLMConfig
 
 logger = logging.getLogger(__name__)
@@ -44,11 +41,18 @@ CROSS_IMAGE_PROMPT = """你是一个反诈多模态分析专家。用户上传�
 }}"""
 
 
+def _clean_base64(value: str) -> str:
+    """去除 data URI 前缀，返回纯 base64 内容。"""
+    if not value:
+        return ""
+    return value.split(",", 1)[1] if "," in value else value
+
+
 class MultimodalEngine:
     """混合多模态识别引擎"""
 
     def __init__(self):
-        self._model: Optional[ChatDashScope] = None
+        self._model: Optional[Any] = None
         self._metrics: Dict[str, Any] = {
             "total_requests": 0,
             "cross_image_correct": 0,
@@ -57,7 +61,7 @@ class MultimodalEngine:
         }
 
     @property
-    def model(self) -> ChatDashScope:
+    def model(self) -> Any:
         if self._model is None:
             from langchain_dashscope import ChatDashScope
             self._model = ChatDashScope(
