@@ -247,29 +247,17 @@ class RAGAgent:
                 MessagesPlaceholder(variable_name="chat_history"),
                 ("human", "{input}"),
             ])
-
-            # 获取历史消息
-            history = self.memory.get_langchain_messages(conversation_id, limit=10)
-
-            # 创建检索链
-            combine_docs_chain = create_stuff_documents_chain(
-                self.chat_model, qa_prompt,
-            )
-
-            retrieval_chain = create_retrieval_chain(
-                self.retriever, combine_docs_chain,
-            )
-
-            response = retrieval_chain.invoke({
-                "input": rewritten,
+            chain = qa_prompt | self.chat_model
+            response = chain.invoke({
+                "context": context,
+                "input": message,
                 "chat_history": history,
             })
+            answer = response.content if response.content else ""
 
-            answer = response.get("answer", "")
-
-            # 保存对话历史
+            # 4. 保存对话历史（写入真实 AI 消息）
             self.memory.add_message(conversation_id, HumanMessage(content=message))
-            self.memory.add_message(conversation_id, type(answer))
+            self.memory.add_message(conversation_id, AIMessage(content=answer))
 
             return answer
 
