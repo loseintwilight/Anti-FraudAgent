@@ -226,22 +226,29 @@ class RAGAgent:
         if not LLMConfig.validate():
             return "AI 服务未配置（DASHSCOPE_API_KEY 缺失），请先配置 API Key"
 
-        if self.retriever is None:
-            # 降级为普通对话
-            logger.warning("RAG 检索器不可用，降级为普通对话")
-            return self._chat_without_rag(message, conversation_id)
-
         try:
-            # 1. 重写查询
-            rewritten = self.rewrite_query(message)
+            # 1. 获取历史并做历史感知的查询改写
+            history = self.memory.get_langchain_messages(
+                conversation_id, limit=10
+            )
+            rewritten = self.rewrite_query(message, history=history)
 
-            # 2. 构建历史感知检索器
-            history_prompt = ChatPromptTemplate.from_messages([
-                MessagesPlaceholder(variable_name="chat_history"),
-                ("human", "{input}"),
-            ])
+            # 2. 历史感知的混合检索（BM25 + 向量 → RRF → 精排）
+            docs = self.retriever.retrieve(
+                rewritten, top_k=5, history=history
+            )
+            context = "\n\n".join(
+                d["page_content"].strip()
+                for d in docs
+                if d.get("page_content") and d["page_content"].strip()
+            )
 
-            # 3. 执行 RAG 对话
+            if not context:
+                # 降级为普通对话
+                logger.warning("知识库无可用上下文，降级为普通对话")
+                return self._chat_without_rag(message, conversation_id)
+
+            # 3. 结合上下文与历史生成回答
             qa_prompt = ChatPromptTemplate.from_messages([
                 ("system", "你是一个专业的反诈骗助手。基于以下上下文回答问题：\n\n{context}"),
                 MessagesPlaceholder(variable_name="chat_history"),
