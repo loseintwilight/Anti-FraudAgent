@@ -179,59 +179,28 @@ def print_summary(results: dict):
     print("评测摘要")
     print("=" * 80)
 
-    # 简化摘要
-    summary = []
+    results_dir = Path(__file__).parent / "results"
+    if not results_dir.is_dir():
+        print("  - 尚无评测产物，请先运行各评测脚本")
+        print("=" * 80)
+        return
 
-    if "rag" in results["results"] and "error" not in results["results"]["rag"]:
-        rag = results["results"]["rag"]
-        if "ablation" in rag and rag["ablation"]:
-            baseline = rag["ablation"][0]
-            final = rag["ablation"][-1]
-            summary.append(
-                f"RAG检索: Recall@5 {baseline['recall@5']:.1%} → {final['recall@5']:.1%} "
-                f"(+{(final['recall@5'] - baseline['recall@5'])*100:.1f}pp)"
-            )
+    for path in sorted(results_dir.glob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"  - {path.name}: 读取失败（{e}）")
+            continue
 
-    if "multimodal" in results["results"] and "error" not in results["results"]["multimodal"]:
-        mm = results["results"]["multimodal"]
-        if "intent_recognition" in mm:
-            summary.append(f"意图识别: 准确率 {mm['intent_recognition']['accuracy']:.1%}")
-        if "ai_synthesis_detection" in mm:
-            summary.append(f"AI合成检测: 检出率 {mm['ai_synthesis_detection']['detection_rate']:.1%}")
-
-    if "agent" in results["results"] and "error" not in results["results"]["agent"]:
-        ag = results["results"]["agent"]
-        if "reflection" in ag:
-            summary.append(f"反思机制: 误判率降低 {ag['reflection']['misjudge_reduction']:.1%}")
-        if "hallucination" in ag:
-            summary.append(f"幻觉率: 降低 {ag['hallucination']['hallucination_reduction']:.1%}")
-
-    if "risk_engine" in results["results"] and "error" not in results["results"]["risk_engine"]:
-        re = results["results"]["risk_engine"]
-        if "classification" in re:
-            summary.append(f"诈骗分类: 准确率 {re['classification']['accuracy']:.1%}")
-        if "persuasion" in re:
-            summary.append(f"话术接受度: 提升 {re['persuasion']['improvement']:.1%}")
-
-    if "crawler" in results["results"] and "error" not in results["results"]["crawler"]:
-        cr = results["results"]["crawler"]
-        if "noise_filter" in cr:
-            summary.append(f"AI爬虫过滤: 精确率 {cr['noise_filter']['precision']:.1%}")
-
-    if "guardian_notification" in results["results"] and "error" not in results["results"]["guardian_notification"]:
-        gn = results["results"]["guardian_notification"]
-        if "normal" in gn:
-            summary.append(f"监护人通知: P99延迟 {gn['normal']['p99_latency']:.3f}s")
-
-    if "memory_system" in results["results"] and "error" not in results["results"]["memory_system"]:
-        ms = results["results"]["memory_system"]
-        if "short_term" in ms:
-            summary.append(f"短期记忆: {'正确' if ms['short_term']['memory_correct'] else '失败'}")
-        if "long_term" in ms:
-            summary.append(f"长期记忆: {'持久化成功' if ms['long_term']['persisted'] else '失败'}")
-
-    for s in summary:
-        print(f"  - {s}")
+        metrics = payload.get("metrics") or {}
+        measured = {k: v for k, v in metrics.items() if isinstance(v, (int, float))}
+        missing = sorted(k for k, v in metrics.items() if v is None)
+        name = payload.get("eval", path.stem)
+        print(f"  - {name}: 已测 {len(measured)} 项 / 数据不足 {len(missing)} 项")
+        for key, value in sorted(measured.items()):
+            print(f"      {key} = {value}")
+        if missing:
+            print(f"      数据不足: {', '.join(missing)}")
 
     print("=" * 80)
 
