@@ -1,15 +1,14 @@
 """
 AI 爬虫噪音过滤评测 + 断点续爬验证
+噪音过滤对固定标注样本做确定性计算；无原始实测日志的指标记为数据不足。
 """
 from __future__ import annotations
 
 import json
 import logging
-import os
 import sys
-import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
