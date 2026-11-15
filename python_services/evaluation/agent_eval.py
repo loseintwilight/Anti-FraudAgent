@@ -165,38 +165,29 @@ class AgentReflectionEvaluator:
     def evaluate_hallucination(self, cases: List[Dict[str, Any]]) -> Dict[str, Any]:
         """评测幻觉率"""
         logger.info("=" * 60)
-        logger.info("开始幻觉率评测")
+        logger.info("幻觉率评测（固定样本概况统计）")
         logger.info("=" * 60)
 
-        no_rag = {"hallucination_count": 0, "total": len(cases)}
-        with_rag = {"hallucination_count": 0, "total": len(cases)}
+        total = len(cases)
+        with_facts = sum(1 for c in cases if c.get("expected_facts"))
+        fact_count = sum(len(c.get("expected_facts") or []) for c in cases)
 
-        import random
-        for case in cases:
-            random.seed(hash(case["id"]) % 10000 + 1)
-
-            # 模拟：无RAG约束时幻觉率40%
-            if random.random() < 0.40:
-                no_rag["hallucination_count"] += 1
-
-            # 模拟：有RAG约束+反思时幻觉率16%
-            if random.random() < 0.16:
-                with_rag["hallucination_count"] += 1
-
-        no_rag_rate = no_rag["hallucination_count"] / no_rag["total"]
-        with_rag_rate = with_rag["hallucination_count"] / with_rag["total"]
-        reduction = (no_rag_rate - with_rag_rate) / no_rag_rate if no_rag_rate > 0 else 0
-
-        logger.info(f"无RAG约束: 幻觉{no_rag['hallucination_count']}/{no_rag['total']} ({no_rag_rate:.2%})")
-        logger.info(f"有RAG+反思: 幻觉{with_rag['hallucination_count']}/{with_rag['total']} ({with_rag_rate:.2%})")
-        logger.info(f"幻觉率降低: {reduction:.2%}")
+        logger.info(f"固定样本: {total} 条, 含期望事实 {with_facts} 条, 事实项合计 {fact_count}")
+        logger.info("幻觉率降低等对照结论: 数据不足（无原始实验日志）")
 
         return {
             "task": "幻觉率评测",
-            "total": no_rag["total"],
-            "no_rag_hallucination_rate": no_rag_rate,
-            "with_rag_hallucination_rate": with_rag_rate,
-            "hallucination_reduction": reduction,
+            "total": total,
+            "no_rag_hallucination_rate": None,
+            "with_rag_hallucination_rate": None,
+            "hallucination_reduction": None,
+            "status": "数据不足",
+            "reason": "无 RAG 约束前后对照实验原始日志，不填充任何对照结论",
+            "sample_profile": {
+                "cases_with_expected_facts": with_facts,
+                "cases_without_expected_facts": total - with_facts,
+                "expected_fact_items": fact_count,
+            },
         }
 
 
