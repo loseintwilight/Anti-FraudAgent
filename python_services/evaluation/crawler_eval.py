@@ -21,9 +21,8 @@ class CrawlerEvaluator:
     """AI爬虫评测器"""
 
     def load_noise_test_data(self) -> List[Dict[str, Any]]:
-        """加载噪音过滤测试数据（100条）"""
+        """加载噪音过滤固定标注样本（100条）"""
         samples = []
-        # 有效反诈内容（50条）
         valid_contents = [
             {"id": f"noise_{i:03d}", "content": content, "is_valid": True}
             for i, content in enumerate([
@@ -81,7 +80,6 @@ class CrawlerEvaluator:
         ]
         samples.extend(valid_contents)
 
-        # 噪声内容（50条）
         noise_contents = [
             {"id": f"noise_{i:03d}", "content": content, "is_valid": False}
             for i, content in enumerate([
@@ -142,7 +140,7 @@ class CrawlerEvaluator:
         return samples
 
     def evaluate_noise_filter(self, samples: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """评测噪音过滤"""
+        """评测噪音过滤：按关键词计数对固定标注样本做确定性计算"""
         logger.info("=" * 60)
         logger.info("开始AI爬虫噪音过滤评测")
         logger.info("=" * 60)
