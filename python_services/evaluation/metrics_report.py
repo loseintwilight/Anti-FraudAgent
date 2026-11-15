@@ -15,34 +15,33 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
-# 确保项目根目录在 path 中
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from app.metrics.tracker import metrics_tracker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-# ============================================
-# 评测数据加载
-# ============================================
-
-def _load_test_data(filename: str) -> Dict[str, Any]:
-    """加载测试数据"""
-    data_dir = Path(__file__).resolve().parent / "test_data"
-    filepath = data_dir / filename
-    if not filepath.exists():
-        logger.warning(f"测试数据文件不存在: {filepath}")
-        return {}
-    with open(filepath, "r", encoding="utf-8") as f:
-        return json.load(f)
+RESULTS_DIR = Path(__file__).resolve().parent / "results"
+_REPORT_FILENAME = "metrics_report.json"
+_INSUFFICIENT_LABEL = "数据不足"
 
 
-def run_cross_image_eval() -> Dict[str, Any]:
-    """跨图识别评测"""
-    logger.info("=" * 60)
-    logger.info("【P1】跨图识别评测")
-    logger.info("=" * 60)
+def _load_artifacts() -> Dict[str, Dict[str, Any]]:
+    """读取所有评测产物（不含报告自身），仅收录含 metrics 字典的文件。"""
+    artifacts: Dict[str, Dict[str, Any]] = {}
+    if not RESULTS_DIR.is_dir():
+        return artifacts
+    for path in sorted(RESULTS_DIR.glob("*.json")):
+        if path.name == _REPORT_FILENAME:
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, ValueError) as e:
+            logger.warning("评测产物读取失败: %s (%s)", path.name, e)
+            continue
+        if isinstance(data, dict) and isinstance(data.get("metrics"), dict):
+            artifacts[path.name] = data
+    return artifacts
 
 
 def generate_report() -> Dict[str, Any]:
