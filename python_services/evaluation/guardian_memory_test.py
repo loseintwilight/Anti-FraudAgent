@@ -237,22 +237,29 @@ class MemorySystemTester:
         }
 
 
+def _write_results(all_results: Dict[str, Any]) -> None:
+    results_dir = Path(__file__).resolve().parent / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    output_path = results_dir / "guardian_memory_test.json"
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(all_results, f, ensure_ascii=False, indent=2, sort_keys=True)
+    print(f"\n评测产物已写入: {output_path}")
+
+
 def main():
     print("=" * 80)
     print("监护人通知链路测试 + 记忆系统测试")
     print("=" * 80)
 
-    # 1. 监护人通知测试
     print("\n[1] 监护人通知链路测试...")
     guardian = GuardianNotificationTester()
     normal_result = guardian.test_normal_notification()
     abnormal_result = guardian.test_abnormal_scenario()
     retry_result = guardian.test_retry_mechanism()
 
-    print(f"\n监护人通知结果:")
-    print(f"  正常延迟 P99={normal_result['p99_latency']:.3f}s, {'<10s 通过' if normal_result['passed'] else '>10s 失败'}")
+    print("\n监护人通知结果:")
+    print(f"  正常延迟: 数据不足（{normal_result['reason']}）")
 
-    # 2. 记忆系统测试
     print("\n[2] 记忆系统测试...")
     memory = MemorySystemTester()
     short_term = memory.test_short_term_memory()
