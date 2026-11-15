@@ -52,14 +52,26 @@ class RiskScorer:
     根据用户画像计算综合风险评分，进行四级风险判定
     """
 
-    def evaluate(self, profile: UserProfile) -> Dict[str, Any]:
+    def evaluate(
+        self, profile: UserProfile, fraud_type: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         执行风险评估
         返回包含总分、等级、来源项、画像摘要的字典
+        可选参数 fraud_type 未显式传入时回退到 profile.fraud_type。
         """
         logger.info(f"开始评估用户风险: user_id={profile.user_id}")
 
-        total_score, sources = self._compute_weighted_score(profile)
+        resolved_fraud_type = (
+            fraud_type if fraud_type is not None
+            else getattr(profile, "fraud_type", None)
+        )
+        age = getattr(profile, "age", 0) or 0
+        adjustments = compute_weight_adjustments(int(age), resolved_fraud_type)
+
+        total_score, sources = self._compute_weighted_score(
+            profile, adjustments["combined_factors"]
+        )
         risk_level = self._determine_level(total_score)
         profile_summary = profile.summary()
 
@@ -69,6 +81,10 @@ class RiskScorer:
             "sources": sources,
             "profile_summary": profile_summary,
         }
+
+        # 可选字段：仅在命中权重调整时附带，不改动上述既有字段
+        if adjustments["applied"]:
+            result["weight_adjustments"] = adjustments
 
         logger.info(
             f"评估完成: 总分={total_score:.2f}, 等级={risk_level}, "
