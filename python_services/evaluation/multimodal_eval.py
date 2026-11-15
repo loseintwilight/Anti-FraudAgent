@@ -172,52 +172,29 @@ class AISynthesisEvaluator:
         logger.info("开始AI合成内容检测评测")
         logger.info("=" * 60)
 
-        # 模拟检测结果（实际项目中由qwen-vl-max检测）
-        # 这里用简化的规则模拟：AI生成图片的检测准确率
-        tp = 0  # 正确检出AI合成
-        fp = 0  # 误判为AI合成
-        tn = 0  # 正确判定为真实
-        fn = 0  # 漏检AI合成
+        tp = 0   # 正确检出AI合成
+        fp = 0   # 误判为AI合成
+        tn = 0   # 正确判定为真实
+        fn = 0   # 漏检AI合成
 
         image_samples = [s for s in samples if s["type"] == "image"]
         audio_samples = [s for s in samples if s["type"] == "audio"]
 
-        # 模拟图片检测：假设检出率85%
-        for s in image_samples:
-            is_ai = s["is_ai_generated"]
-            # 模拟：85%的概率正确判断
-            import random
-            random.seed(hash(s["id"]) % 10000)
-            detected = random.random() < 0.85
-
+        for s in image_samples + audio_samples:
+            is_ai = bool(s["is_ai_generated"])
+            detected = self._detect(s.get("description", ""))
             if is_ai and detected:
                 tp += 1
             elif is_ai and not detected:
                 fn += 1
             elif not is_ai and not detected:
                 tn += 1
-            elif not is_ai and detected:
-                fp += 1
-
-        # 模拟音频检测：假设检出率80%
-        for s in audio_samples:
-            is_ai = s["is_ai_generated"]
-            import random
-            random.seed(hash(s["id"]) % 10000 + 1)
-            detected = random.random() < 0.80
-
-            if is_ai and detected:
-                tp += 1
-            elif is_ai and not detected:
-                fn += 1
-            elif not is_ai and not detected:
-                tn += 1
-            elif not is_ai and detected:
+            else:
                 fp += 1
 
         total = len(samples)
-        detection_rate = tp / (tp + fn) if (tp + fn) > 0 else 0  # 检出率
-        false_positive_rate = fp / (fp + tn) if (fp + tn) > 0 else 0  # 误报率
+        detection_rate = tp / (tp + fn) if (tp + fn) > 0 else 0
+        false_positive_rate = fp / (fp + tn) if (fp + tn) > 0 else 0
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0
         f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
