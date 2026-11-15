@@ -63,43 +63,24 @@ class GuardianNotificationTester:
         logger.info("=" * 60)
 
         scenarios = [
-            {
-                "name": "Redis不可用",
-                "test": lambda: True,
-                "expected": "降级为数据库写入，待Redis恢复后补发",
-                "passed": True,
-            },
-            {
-                "name": "推送网关超时",
-                "test": lambda: True,
-                "expected": "重试1次后写入消息队列，异步补发",
-                "passed": True,
-            },
-            {
-                "name": "监护人未绑定",
-                "test": lambda: True,
-                "expected": "提示用户绑定监护人，不发送通知",
-                "passed": True,
-            },
-            {
-                "name": "多次推送失败",
-                "test": lambda: True,
-                "expected": "记录到管理后台告警列表，人工介入",
-                "passed": True,
-            },
+            {"name": "Redis不可用", "expected": "降级为数据库写入，待Redis恢复后补发", "passed": None},
+            {"name": "推送网关超时", "expected": "重试1次后写入消息队列，异步补发", "passed": None},
+            {"name": "监护人未绑定", "expected": "提示用户绑定监护人，不发送通知", "passed": None},
+            {"name": "多次推送失败", "expected": "记录到管理后台告警列表，人工介入", "passed": None},
         ]
 
         for s in scenarios:
-            logger.info(f"  {s['name']}: {s['expected']}")
-            logger.info(f"    验证: {'通过' if s['passed'] else '失败'}")
+            logger.info(f"  {s['name']}: {s['expected']} (验证结论: 数据不足)")
 
         return {
             "task": "监护人通知-异常场景",
             "scenarios": scenarios,
+            "status": "数据不足",
+            "reason": "无异常场景注入与降级的真实运行日志，不填充验证结论",
         }
 
     def test_retry_mechanism(self) -> Dict[str, Any]:
-        """测试推送失败重试机制"""
+        """重试机制结论需真实推送日志，记为数据不足。"""
         logger.info("=" * 60)
         logger.info("监护人通知 - 重试机制测试")
         logger.info("=" * 60)
