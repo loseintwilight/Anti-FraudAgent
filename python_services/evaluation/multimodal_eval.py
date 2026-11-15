@@ -107,14 +107,12 @@ class IntentRecognitionEvaluator:
             key = f"{expected}->{predicted}"
             confusion[key] = confusion.get(key, 0) + 1
 
-            # 按难度统计
             if difficulty not in category_results:
                 category_results[difficulty] = {"correct": 0, "total": 0}
             category_results[difficulty]["total"] += 1
             if is_correct:
                 category_results[difficulty]["correct"] += 1
 
-            # Bad Case
             if not is_correct:
                 bad_cases.append({
                     "id": sample["id"],
@@ -127,11 +125,8 @@ class IntentRecognitionEvaluator:
         accuracy = correct / total if total > 0 else 0
 
         logger.info(f"意图识别准确率: {accuracy:.2%} ({correct}/{total})")
-        logger.info(f"\n混淆矩阵:")
         for k, v in sorted(confusion.items()):
             logger.info(f"  {k}: {v}")
-
-        logger.info(f"\n按难度分布:")
         for diff, stats in sorted(category_results.items()):
             acc = stats["correct"] / stats["total"] if stats["total"] > 0 else 0
             logger.info(f"  {diff}: {acc:.2%} ({stats['correct']}/{stats['total']})")
