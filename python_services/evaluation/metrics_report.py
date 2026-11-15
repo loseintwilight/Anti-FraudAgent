@@ -83,25 +83,30 @@ def run_cross_image_eval() -> Dict[str, Any]:
     metrics_tracker.save()
 
     return {
-        "accuracy": round(accuracy, 1),
-        "total": len(samples),
-        "correct": correct,
-        "bad_cases": bad_cases[:5],
-        "target": data.get("target_accuracy", 89.0),
+        "schema_version": "1.0",
+        "type": "report",
+        "measured": measured,
+        "insufficient": insufficient,
+        "insufficient_label": _INSUFFICIENT_LABEL,
+        "sections": sections,
+        "sources": sorted(artifacts.keys()),
     }
 
 
-def run_ai_synthesis_eval() -> Dict[str, Any]:
-    """AI合成检测评测"""
-    logger.info("=" * 60)
-    logger.info("【P2】AI合成内容检测评测")
-    logger.info("=" * 60)
+def main() -> Dict[str, Any]:
+    report = generate_report()
 
-    data = _load_test_data("ai_synthesis_eval.json")
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = RESULTS_DIR / _REPORT_FILENAME
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2, sort_keys=True)
 
-    image_samples = data.get("image_samples", [])
-    audio_samples = data.get("audio_samples", [])
-    all_samples = image_samples + audio_samples
+    logger.info("=" * 70)
+    logger.info("综合指标报告（仅呈现评测产物中真实存在的结果）")
+    logger.info("=" * 70)
+    logger.info("数据来源: %s", ", ".join(report["sources"]) or "（无产物）")
+    for key, value in sorted(report["measured"].items()):
+        logger.info("  %s = %s", key, value)
 
     logger.info("-" * 70)
     logger.info("%s 的指标:", _INSUFFICIENT_LABEL)
