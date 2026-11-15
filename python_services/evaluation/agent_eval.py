@@ -200,6 +200,15 @@ class AgentReflectionEvaluator:
         }
 
 
+def _write_results(all_results: Dict[str, Any]) -> None:
+    results_dir = Path(__file__).resolve().parent / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    output_path = results_dir / "agent_eval.json"
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(all_results, f, ensure_ascii=False, indent=2, sort_keys=True)
+    print(f"\n评测产物已写入: {output_path}")
+
+
 def main():
     print("=" * 80)
     print("Agent 反思机制与幻觉率评测")
@@ -207,16 +216,13 @@ def main():
 
     evaluator = AgentReflectionEvaluator()
 
-    # 1. 反思机制评测
     risk_cases = evaluator.load_risk_cases()
     reflection_results = evaluator.evaluate_reflection(risk_cases)
 
-    print(f"\n反思机制评测结果:")
-    print(f"  无反思准确率: {reflection_results['no_reflection_accuracy']:.2%}")
-    print(f"  有反思准确率: {reflection_results['with_reflection_accuracy']:.2%}")
-    print(f"  误判率降低: {reflection_results['misjudge_reduction']:.2%}")
+    print("\n反思机制评测结果:")
+    print(f"  固定样本: {reflection_results['total']} 条")
+    print(f"  误判率降低: 数据不足（{reflection_results['reason']}）")
 
-    # 2. 幻觉率评测
     hallucination_cases = evaluator.load_hallucination_cases()
     hallucination_results = evaluator.evaluate_hallucination(hallucination_cases)
 
