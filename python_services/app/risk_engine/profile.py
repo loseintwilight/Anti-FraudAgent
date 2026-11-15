@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from app.api.schemas import UserBehavior
-from app.risk_engine.rules import accountant, elderly, student, worker
+from app.risk_engine.rules import accountant, child, elderly, student, worker
 
 logger = logging.getLogger(__name__)
 

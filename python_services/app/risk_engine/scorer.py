@@ -92,6 +92,9 @@ class RiskScorer:
             if attr_name is None:
                 continue
 
+            # 生效权重 = 人群基础权重 × 年龄/案件类型合并系数
+            weight = base_weight * factors.get(dim_key, 1.0)
+
             # 获取该维度评分
             dim_score = getattr(profile, attr_name, 0.0)
 
@@ -111,6 +114,9 @@ class RiskScorer:
 
         # 按贡献降序排列
         sources.sort(key=lambda x: x["contribution"], reverse=True)
+
+        # 调权后加权和可能超过 100，钳制以保持 0~100 分与四级阈值不变
+        total_score = min(max(total_score, 0.0), 100.0)
 
         return total_score, sources
 
