@@ -241,18 +241,33 @@ def main():
 
     print(f"\n话术接受度评估: 提升 {persuasion_results['improvement']:.2%}")
 
-    # 保存结果
-    all_results = {
-        "classification": classification_results,
-        "persuasion": persuasion_results,
+    insufficient = {
+        "persuasion_standard_avg": persuasion_results["reason"],
+        "persuasion_personalized_avg": persuasion_results["reason"],
+        "persuasion_improvement": persuasion_results["reason"],
     }
-    output_path = os.path.join(
-        os.path.dirname(__file__), "test_data", "risk_engine_eval_results.json"
-    )
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(all_results, f, ensure_ascii=False, indent=2)
 
-    print(f"\n评测结果已保存到: {output_path}")
+    all_results = {
+        "schema_version": "1.0",
+        "eval": "risk_engine_eval",
+        "source_files": ["test_data/fraud_classification.json"],
+        "method": (
+            "诈骗分类按关键词规则对固定标注样本做确定性计算；"
+            "话术接受度 A/B 对照结论无原始实验日志支撑，指标记为 null 并标注数据不足"
+        ),
+        "metrics": {
+            "fraud_classification_accuracy": round(classification_results["accuracy"], 6),
+            "persuasion_standard_avg": None,
+            "persuasion_personalized_avg": None,
+            "persuasion_improvement": None,
+        },
+        "details": {
+            "classification": classification_results,
+            "persuasion": persuasion_results,
+        },
+        "insufficient": insufficient,
+    }
+    _write_results(all_results)
 
 
 if __name__ == "__main__":
