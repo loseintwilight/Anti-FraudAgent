@@ -150,7 +150,7 @@ class StressTester:
                 "expected": "验证码服务仍可用",
             },
             {
-                "name": "ChromaDB不可用",
+                "name": "Qdrant 不可用",
                 "description": "模拟向量数据库不可用，应降级为关键词匹配",
                 "expected": "返回关键词匹配结果",
             },

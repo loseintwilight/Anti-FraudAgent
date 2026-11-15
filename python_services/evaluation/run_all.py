@@ -174,7 +174,7 @@ def run_all_evaluations():
 
 
 def print_summary(results: dict):
-    """打印评测摘要"""
+    """打印评测摘要；缺原始实验数据的指标如实标注「数据不足」，不做任何填充。"""
     print("\n\n" + "=" * 80)
     print("评测摘要")
     print("=" * 80)

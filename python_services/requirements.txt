@@ -16,8 +16,10 @@ Pillow>=10.0.0
 # NLP 相关（sentence-transformers 会自行拉取兼容的 torch 版本）
 sentence-transformers>=2.2.0
 
-# 向量存储（chromadb 会自行处理底层依赖兼容性）
-chromadb>=0.4.0
+# 向量存储（Qdrant 本地持久化 / 可选远程）
+qdrant-client>=1.7.0
+# 关键词检索（BM25，混合检索的关键词召回路）
+rank_bm25>=0.2.2
 
 # LangChain 核心（替代 Spring AI，实现 AI 智能体、RAG、工具调用）
 # 注意：langchain-dashscope 0.2+ 要求 Python >= 3.11
@@ -38,3 +40,5 @@ schedule>=1.1.0
 python-multipart>=0.0.5
 python-dateutil>=2.8.0
 python-dotenv>=1.0.0
+# PDF 报告生成（app/llm/tools.py 已 import）
+reportlab>=4.0.0
