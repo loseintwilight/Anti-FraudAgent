@@ -313,23 +313,37 @@ def main():
 
     print(f"断点续爬: {'成功' if breakpoint_results['is_resumed'] else '失败'}")
 
-    # 3. 反爬策略
     print("\n[3] 反爬策略记录...")
     anti_crawl_results = evaluator.test_anti_crawl_strategies()
 
-    # 保存结果
     all_results = {
-        "noise_filter": noise_results,
-        "breakpoint_resume": breakpoint_results,
-        "anti_crawl": anti_crawl_results,
+        "schema_version": "1.0",
+        "eval": "crawler_eval",
+        "source_files": [
+            "evaluation/crawler_eval.py::load_noise_test_data",
+            "evaluation/crawler_eval.py::test_breakpoint_resume",
+        ],
+        "method": (
+            "噪音过滤按关键词计数对脚本内 100 条固定标注样本做确定性计算；"
+            "断点续爬为固定序列的集合运算；反爬策略生效率无原始实测日志，记为 null"
+        ),
+        "metrics": {
+            "noise_filter_precision": round(noise_results["precision"], 6),
+            "noise_filter_recall": round(noise_results["recall"], 6),
+            "noise_filter_false_kill_rate": round(noise_results["false_kill_rate"], 6),
+            "noise_filter_f1": round(noise_results["f1"], 6),
+            "anti_crawl_effectiveness": None,
+        },
+        "details": {
+            "noise_filter": noise_results,
+            "breakpoint_resume": breakpoint_results,
+            "anti_crawl": anti_crawl_results,
+        },
+        "insufficient": {
+            "anti_crawl_effectiveness": anti_crawl_results["reason"],
+        },
     }
-    output_path = os.path.join(
-        os.path.dirname(__file__), "test_data", "crawler_eval_results.json"
-    )
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(all_results, f, ensure_ascii=False, indent=2)
-
-    print(f"\n评测结果已保存到: {output_path}")
+    _write_results(all_results)
 
 
 if __name__ == "__main__":
