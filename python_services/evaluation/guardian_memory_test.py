@@ -271,19 +271,21 @@ def main():
             "abnormal": abnormal_result,
             "retry": retry_result,
         },
-        "memory_system": {
-            "short_term": short_term,
-            "long_term": long_term,
-            "update": update_test,
+        "details": {
+            "guardian_notification": {
+                "normal": normal_result,
+                "abnormal": abnormal_result,
+                "retry": retry_result,
+            },
+            "memory_system": {
+                "short_term": short_term,
+                "long_term": long_term,
+                "update": update_test,
+            },
         },
+        "insufficient": insufficient,
     }
-    output_path = os.path.join(
-        os.path.dirname(__file__), "test_data", "guardian_memory_test_results.json"
-    )
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(all_results, f, ensure_ascii=False, indent=2)
-
-    print(f"\n评测结果已保存到: {output_path}")
+    _write_results(all_results)
 
 
 if __name__ == "__main__":
