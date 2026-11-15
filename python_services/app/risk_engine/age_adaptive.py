@@ -1,13 +1,21 @@
 """
-年龄自适应调权模块
-根据用户年龄段自动调整风险维度权重
-- 老年用户 × 冒充公检法 → 置信度 × 1.3
-- 青年用户 × 刷单返利 → 置信度 × 1.2
-- 学生用户 × 游戏交易 → 置信度 × 1.25
+自适应权重调整模块
+按用户年龄组与诈骗案件类型，产出作用于各风险维度的权重系数，供 scorer 与人群基础权重相乘。
+
+- 年龄组 → 各维度敏感系数（按年龄组对相关维度乘系数）
+- 案件类型 → 各维度敏感系数（配置化、可扩展）
+- 案件类型 × 年龄组 → 综合系数（AGE_ADAPTIVE_BOOST）
+合并系数 = 年龄系数 × 案件类型系数 × 综合系数，采用相乘而非覆盖。
 """
 from __future__ import annotations
 
-from typing import Dict
+from typing import Any, Dict, Optional
+
+# 8 个风险维度（与 scorer 的 DIMENSION_ATTR_MAP 一致）
+DIMENSION_KEYS = (
+    "call", "sms", "transaction", "app",
+    "network", "device", "account", "reported",
+)
 
 # 年龄分组
 AGE_GROUPS = {

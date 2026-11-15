@@ -144,6 +144,7 @@ class UserProfile:
         self.province = behavior.province
         self.city = behavior.city
         self.behavior = behavior
+        self.fraud_type = fraud_type
 
         # 检测职业/人群
         self.occupation = _detect_occupation(behavior)
@@ -190,16 +191,10 @@ class UserProfile:
         return self
 
     def _load_weights_by_occupation(self) -> None:
-        """根据职业加载差异化维度权重"""
-        occupation = self.occupation
-        if occupation == "student":
-            self.dimension_weights = student.WEIGHTS.copy()
-        elif occupation == "elderly":
-            self.dimension_weights = elderly.WEIGHTS.copy()
-        elif occupation == "worker":
-            self.dimension_weights = worker.WEIGHTS.copy()
-        elif occupation == "accountant":
-            self.dimension_weights = accountant.WEIGHTS.copy()
+        """根据人群注册表加载差异化维度权重（5 类逐一登记）"""
+        module = OCCUPATION_RULE_MODULES.get(self.occupation)
+        if module is not None:
+            self.dimension_weights = module.WEIGHTS.copy()
         else:
             # 默认权重
             self.dimension_weights = {
