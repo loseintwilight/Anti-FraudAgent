@@ -230,15 +230,6 @@ class AISynthesisEvaluator:
         logger.info(f"精确率: {precision:.2%}")
         logger.info(f"F1: {f1:.2%}")
 
-        # 按类型统计
-        image_total = len(image_samples)
-        audio_total = len(audio_samples)
-        image_ai = sum(1 for s in image_samples if s["is_ai_generated"])
-        audio_ai = sum(1 for s in audio_samples if s["is_ai_generated"])
-
-        logger.info(f"\n图片检测: {image_total}样本 (AI合成{image_ai})")
-        logger.info(f"音频检测: {audio_total}样本 (AI合成{audio_ai})")
-
         return {
             "task": "AI合成内容检测",
             "total": total,
@@ -248,9 +239,19 @@ class AISynthesisEvaluator:
             "precision": precision,
             "recall": recall,
             "f1": f1,
-            "image_samples": image_total,
-            "audio_samples": audio_total,
+            "image_samples": len(image_samples),
+            "audio_samples": len(audio_samples),
         }
+
+
+def _write_results(all_results: Dict[str, Any]) -> None:
+    """将确定性评测结果写入 evaluation/results/multimodal_eval.json"""
+    results_dir = Path(__file__).resolve().parent / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    output_path = results_dir / "multimodal_eval.json"
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(all_results, f, ensure_ascii=False, indent=2, sort_keys=True)
+    print(f"\n评测产物已写入: {output_path}")
 
 
 def main():
@@ -258,7 +259,6 @@ def main():
     print("多模态识别评测")
     print("=" * 80)
 
-    # 1. 意图识别评测
     intent_evaluator = IntentRecognitionEvaluator()
     intent_samples = intent_evaluator.load_test_data()
     intent_results = intent_evaluator.evaluate(intent_samples)
