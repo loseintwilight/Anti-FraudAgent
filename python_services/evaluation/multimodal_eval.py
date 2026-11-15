@@ -65,17 +65,14 @@ class IntentRecognitionEvaluator:
         if warning_score >= 1:
             return "反诈预警"
 
-        # 再检查咨询关键词
         consultation_score = sum(1 for kw in self.CONSULTATION_KEYWORDS if kw in text_lower)
         if consultation_score >= 1:
             return "咨询"
 
-        # 检查闲聊关键词
         chat_score = sum(1 for kw in self.CHAT_KEYWORDS if kw in text_lower)
         if chat_score >= 1:
             return "闲聊"
 
-        # 默认：如果包含"诈骗""骗"等词 → 咨询；否则 → 闲聊
         if any(kw in text_lower for kw in ["诈骗", "骗", "欺诈", "违法"]):
             return "咨询"
         return "闲聊"
@@ -103,7 +100,6 @@ class IntentRecognitionEvaluator:
             if is_correct:
                 correct += 1
 
-            # 混淆矩阵
             key = f"{expected}->{predicted}"
             confusion[key] = confusion.get(key, 0) + 1
 
