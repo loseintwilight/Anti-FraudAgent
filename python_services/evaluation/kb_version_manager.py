@@ -60,7 +60,7 @@ class KnowledgeBaseManager:
             version = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         source = LLMConfig.VECTOR_STORE_PATH
-        backup_path = os.path.join(self.BACKUP_DIR, f"chroma_backup_{version}")
+        backup_path = os.path.join(self.BACKUP_DIR, f"qdrant_backup_{version}")
 
         if not os.path.exists(source):
             logger.warning(f"向量存储路径不存在: {source}")
