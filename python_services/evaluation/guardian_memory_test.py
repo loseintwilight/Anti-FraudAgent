@@ -104,23 +104,12 @@ class GuardianNotificationTester:
         logger.info("监护人通知 - 重试机制测试")
         logger.info("=" * 60)
 
-        retry_tests = []
-        for i in range(5):
-            # 模拟：第1次失败，第2次成功
-            first_fail = i < 2
-            retry_tests.append({
-                "attempt": i + 1,
-                "first_try_success": not first_fail,
-                "retry_success": True,
-            })
-
-        retry_success = all(rt["retry_success"] for rt in retry_tests)
-        logger.info(f"重试机制: {'所有重试成功' if retry_success else '存在重试失败'}")
-
         return {
             "task": "监护人通知-重试机制",
-            "tests": retry_tests,
-            "all_retry_success": retry_success,
+            "tests": [],
+            "all_retry_success": None,
+            "status": "数据不足",
+            "reason": "无推送失败与重试的真实运行日志",
         }
 
 
@@ -128,13 +117,12 @@ class MemorySystemTester:
     """Agent 记忆系统测试器"""
 
     def test_short_term_memory(self) -> Dict[str, Any]:
-        """短期记忆测试：10轮对话后回忆第1轮"""
+        """短期记忆确定性验证：构造固定对话后检查首轮内容"""
         logger.info("=" * 60)
         logger.info("记忆系统测试 - 短期记忆")
         logger.info("=" * 60)
 
-        # 模拟10轮对话
-        conversation = []
+        conversation: List[Dict[str, str]] = []
         for i in range(1, 11):
             conversation.append({"role": "user", "content": f"这是第{i}轮对话，我说了：我的猫叫小花"})
             conversation.append({"role": "assistant", "content": f"收到，第{i}轮"})
