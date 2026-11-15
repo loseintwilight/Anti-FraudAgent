@@ -77,17 +77,22 @@ class RiskScorer:
         return result
 
     def _compute_weighted_score(
-        self, profile: UserProfile
+        self,
+        profile: UserProfile,
+        weight_factors: Optional[Dict[str, float]] = None,
     ) -> Tuple[float, List[Dict[str, Any]]]:
         """
         计算加权总分
-        返回 (总分, 风险来源明细列表)
+        weight_factors 为年龄组与案件类型合并后的逐维度权重系数，
+        与人群基础权重相乘而非覆盖；未传入时按 1.0 处理。
+        返回 (总分, 风险来源明细列表)，总分限定在 0~100。
         """
         weights = profile.dimension_weights
+        factors = weight_factors or {}
         total_score = 0.0
         sources: List[Dict[str, Any]] = []
 
-        for dim_key, weight in weights.items():
+        for dim_key, base_weight in weights.items():
             attr_name = DIMENSION_ATTR_MAP.get(dim_key)
             if attr_name is None:
                 continue
