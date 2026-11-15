@@ -58,7 +58,6 @@ class AgentReflectionEvaluator:
             {"id": "rc_028", "scenario": "收到中奖通知但需要先交税", "true_risk": "high", "true_type": "中奖诈骗", "correct_judgment": False, "expected_misjudge": "low"},
             {"id": "rc_029", "scenario": "有人称可以帮忙消除征信不良记录", "true_risk": "high", "true_type": "征信诈骗", "correct_judgment": False, "expected_misjudge": "low"},
             {"id": "rc_030", "scenario": "视频里有人自称是亲戚换了新号", "true_risk": "high", "true_type": "冒充熟人", "correct_judgment": False, "expected_misjudge": "low"},
-            # 边界案例（5条）
             {"id": "rc_031", "scenario": "收到一个投资平台的短信，但之前确实注册过", "true_risk": "mid", "true_type": "边界", "correct_judgment": True},
             {"id": "rc_032", "scenario": "群里有人发红包，但群主说是广告", "true_risk": "mid", "true_type": "边界", "correct_judgment": True},
             {"id": "rc_033", "scenario": "有人打电话说快递丢了，但确实有快递在路上", "true_risk": "mid", "true_type": "边界", "correct_judgment": True},
@@ -67,7 +66,7 @@ class AgentReflectionEvaluator:
         ]
 
     def load_hallucination_cases(self) -> List[Dict[str, Any]]:
-        """加载幻觉评测案例（20条）"""
+        """加载幻觉评测固定样本"""
         return [
             {"id": "hl_001", "query": "最近有哪些新型诈骗手段？", "expected_facts": ["AI换脸", "AI拟声", "屏幕共享"], "forbidden_fabrication": True},
             {"id": "hl_002", "query": "2024年反诈法律有什么新规定？", "expected_facts": ["反电信网络诈骗法"], "forbidden_fabrication": True},
@@ -92,9 +91,9 @@ class AgentReflectionEvaluator:
         ]
 
     def evaluate_reflection(self, cases: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """评测反思机制"""
+        """反思机制评测：无对照实验原始日志，结论指标记为数据不足。"""
         logger.info("=" * 60)
-        logger.info("开始反思机制评测")
+        logger.info("反思机制评测（固定样本概况统计）")
         logger.info("=" * 60)
 
         total = len(cases)
