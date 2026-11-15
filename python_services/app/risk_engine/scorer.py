@@ -6,8 +6,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+from app.risk_engine.age_adaptive import compute_weight_adjustments
 from app.risk_engine.profile import UserProfile
 
 logger = logging.getLogger(__name__)
