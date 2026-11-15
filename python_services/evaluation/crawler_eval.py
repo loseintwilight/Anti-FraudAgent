@@ -277,20 +277,31 @@ class CrawlerEvaluator:
         logger.info("=" * 60)
 
         strategies = [
-            {"name": "IP代理池", "description": "使用代理IP轮换，避免单一IP被封", "effectiveness": "85%"},
-            {"name": "User-Agent轮换", "description": "随机切换浏览器User-Agent头", "effectiveness": "70%"},
-            {"name": "请求间隔随机化", "description": "请求间隔在1-3秒内随机变化", "effectiveness": "80%"},
-            {"name": "降级为静态解析", "description": "动态渲染失败时降级为requests+BeautifulSoup", "effectiveness": "60%"},
-            {"name": "Cookie池管理", "description": "维护多个账号Cookie，轮换使用", "effectiveness": "75%"},
+            {"name": "IP代理池", "description": "使用代理IP轮换，避免单一IP被封", "effectiveness": None},
+            {"name": "User-Agent轮换", "description": "切换浏览器User-Agent头", "effectiveness": None},
+            {"name": "请求间隔控制", "description": "按配置控制请求间隔", "effectiveness": None},
+            {"name": "降级为静态解析", "description": "动态渲染失败时降级为requests+BeautifulSoup", "effectiveness": None},
+            {"name": "Cookie池管理", "description": "维护多个账号Cookie，轮换使用", "effectiveness": None},
         ]
 
         for s in strategies:
-            logger.info(f"  {s['name']}: {s['description']} (生效率: {s['effectiveness']})")
+            logger.info(f"  {s['name']}: {s['description']} (生效率: 数据不足)")
 
         return {
             "task": "反爬策略记录",
             "strategies": strategies,
+            "status": "数据不足",
+            "reason": "无反爬策略生效率的原始实测日志，不填充任何百分比",
         }
+
+
+def _write_results(all_results: Dict[str, Any]) -> None:
+    results_dir = Path(__file__).resolve().parent / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    output_path = results_dir / "crawler_eval.json"
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(all_results, f, ensure_ascii=False, indent=2, sort_keys=True)
+    print(f"\n评测产物已写入: {output_path}")
 
 
 def main():
