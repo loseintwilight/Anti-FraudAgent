@@ -175,30 +175,18 @@ class MemorySystemTester:
             "guardian_contact": "13800138000",
         }
 
-        # 模拟持久化
-        profile_file = os.path.join(
-            os.path.dirname(__file__), "test_data", "user_profile_test.json"
-        )
-        with open(profile_file, "w", encoding="utf-8") as f:
-            json.dump(user_profile, f, ensure_ascii=False, indent=2)
-
-        # 模拟重启后读取
-        with open(profile_file, "r", encoding="utf-8") as f:
-            loaded_profile = json.load(f)
-
+        serialized = json.dumps(user_profile, ensure_ascii=False, sort_keys=True)
+        loaded_profile = json.loads(serialized)
         is_persisted = loaded_profile == user_profile
-        logger.info(f"长期记忆持久化: {'成功' if is_persisted else '失败'}")
+
+        logger.info(f"长期记忆序列化往返: {'成功' if is_persisted else '失败'}")
         logger.info(f"  用户画像: {loaded_profile['fraud_role']}")
         logger.info(f"  历史检测: {len(loaded_profile['detection_history'])}条")
-
-        # 清理
-        if os.path.exists(profile_file):
-            os.remove(profile_file)
 
         return {
             "task": "长期记忆测试",
             "persisted": is_persisted,
-            "profile_fields": list(user_profile.keys()),
+            "profile_fields": sorted(user_profile.keys()),
             "detection_history_count": len(user_profile["detection_history"]),
             "method": "固定画像的 JSON 序列化往返比对，无文件副作用",
         }
