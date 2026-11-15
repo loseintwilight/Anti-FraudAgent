@@ -173,10 +173,8 @@ class VectorRetriever:
                 metadata=doc.get("metadata"),
                 embedding=embedding,
             )
-            if ok:
-                success_count += 1
-
-        logger.info(f"批量添加文档: {success_count}/{len(documents)} 成功")
+        success_count = hybrid.upsert_documents(payloads)
+        logger.info("批量写入知识条目: %d/%d 成功", success_count, len(documents))
         return success_count
 
     def search(
@@ -191,7 +189,7 @@ class VectorRetriever:
         参数:
             query: 查询文本（字符串）或查询向量（浮点数列表）
             n_results: 返回结果数量
-            where: 过滤条件（可选），如 {"source": "mps_gov"}
+            where: 过滤条件（可选），按 metadata 键值做轻量后过滤
 
         返回:
             {
@@ -201,13 +199,57 @@ class VectorRetriever:
                 "metadatas": List[List[Dict]],
             }
         """
-        if self.collection is None:
-            logger.warning("集合不可用，无法检索")
-            return {"ids": [], "distances": [], "documents": [], "metadatas": []}
+        empty: Dict[str, Any] = {
+            "ids": [],
+            "distances": [],
+            "documents": [],
+            "metadatas": [],
+        }
+        client = self.client
+        if client is None or not hybrid.collection_exists(client):
+            logger.warning("Qdrant 集合不可用，无法检索")
+            return empty
 
         try:
-            kwargs: Dict[str, Any] = {
-                "n_results": n_results,
+            vector = (
+                hybrid.get_embedder().embed(query)
+                if isinstance(query, str)
+                else query
+            )
+            try:
+                hits = client.query_points(
+                    collection_name=self.collection_name,
+                    query=vector,
+                    limit=n_results,
+                    with_payload=True,
+                ).points
+            except AttributeError:
+                hits = client.search(
+                    collection_name=self.collection_name,
+                    query_vector=vector,
+                    limit=n_results,
+                    with_payload=True,
+                )
+
+            ids: List[str] = []
+            distances: List[float] = []
+            documents: List[str] = []
+            metadatas: List[Dict[str, Any]] = []
+            for hit in hits:
+                payload = hit.payload or {}
+                metadata = payload.get("metadata") or {}
+                if where and any(metadata.get(k) != v for k, v in where.items()):
+                    continue
+                ids.append(str(hit.id))
+                distances.append(1.0 - float(hit.score))
+                documents.append(payload.get("page_content", ""))
+                metadatas.append(metadata)
+
+            return {
+                "ids": [ids],
+                "distances": [distances],
+                "documents": [documents],
+                "metadatas": [metadatas],
             }
         except Exception as e:
             logger.error("检索失败: %s", e)
