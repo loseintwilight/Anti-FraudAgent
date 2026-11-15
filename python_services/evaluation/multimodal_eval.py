@@ -263,19 +263,17 @@ def main():
     intent_samples = intent_evaluator.load_test_data()
     intent_results = intent_evaluator.evaluate(intent_samples)
 
-    print(f"\n{'='*80}")
-    print(f"意图识别评测结果: 准确率 {intent_results['accuracy']:.2%}")
+    print(f"\n意图识别评测结果: 准确率 {intent_results['accuracy']:.2%}")
     print(f"总样本: {intent_results['total']}, 正确: {intent_results['correct']}")
-    print(f"{'='*80}")
 
-    # 2. AI合成检测评测
     synthesis_evaluator = AISynthesisEvaluator()
     synthesis_samples = synthesis_evaluator.load_test_data()
     synthesis_results = synthesis_evaluator.evaluate(synthesis_samples)
 
-    print(f"\n{'='*80}")
-    print(f"AI合成检测结果: 检出率 {synthesis_results['detection_rate']:.2%}, 误报率 {synthesis_results['false_positive_rate']:.2%}")
-    print(f"{'='*80}")
+    print(
+        f"\nAI合成检测结果: 检出率 {synthesis_results['detection_rate']:.2%}, "
+        f"误报率 {synthesis_results['false_positive_rate']:.2%}"
+    )
 
     all_results = {
         "schema_version": "1.0",
