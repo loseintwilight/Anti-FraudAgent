@@ -1,6 +1,6 @@
 """
 多模态识别评测脚本
-评测指标：跨图识别率、AI合成检出率、意图识别准确率
+对固定标注样本做确定性计算：意图识别准确率、AI合成检出率。
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class IntentRecognitionEvaluator:
     """意图识别评测器"""
 
-    # 意图识别关键词规则（模拟三层意图识别逻辑）
+    # 意图识别关键词规则
     CHAT_KEYWORDS = [
         "你好", "在吗", "嗨", "hello", "hi", "早上好", "晚上好", "晚安",
         "叫什么名字", "你是谁", "你会做什么", "天气", "季节", "颜色",
@@ -60,7 +60,6 @@ class IntentRecognitionEvaluator:
         """基于关键词规则预测意图"""
         text_lower = text.lower()
 
-        # 先检查反诈预警关键词
         warning_score = sum(1 for kw in self.WARNING_KEYWORDS if kw in text_lower)
         if warning_score >= 1:
             return "反诈预警"

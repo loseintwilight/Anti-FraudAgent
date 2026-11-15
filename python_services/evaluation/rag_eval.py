@@ -217,27 +217,11 @@ class RAGEvaluator:
 
             try:
                 rewritten = self.rag_agent.rewrite_query(query)
-                # 多路召回：向量检索 + 关键词匹配
-                if self.rag_agent.vector_store is not None:
-                    retriever = self.rag_agent.vector_store.as_retriever(
-                        search_type="similarity",
-                        search_kwargs={"k": 10},
-                    )
-                    vector_results = retriever.invoke(rewritten)
-
-                    # 模拟多路召回：合并向量检索和关键词检索结果
-                    retrieved = []
-                    seen = set()
-                    for doc in vector_results:
-                        key = doc.page_content[:50]
-                        if key not in seen:
-                            seen.add(key)
-                            retrieved.append({
-                                "text": doc.page_content,
-                                "metadata": doc.metadata,
-                            })
-                else:
-                    retrieved = []
+                # 完整方案：BM25 + 向量多路召回 → RRF → 精排（模型缺失自动降级）
+                docs = HybridRetriever(enable_rerank=True).retrieve(
+                    rewritten, top_k=10, history=[query]
+                )
+                retrieved = _hybrid_to_rows(docs)
             except Exception as e:
                 logger.warning(f"多路召回检索失败 [{sample['id']}]: {e}")
                 retrieved = []
