@@ -164,62 +164,29 @@ class PersuasionEvaluator:
         logger.info("开始话术接受度 A/B 对比评估")
         logger.info("=" * 60)
 
-        # 模拟A/B对比评分（标准模板 vs 人群差异化）
-        # 评分维度：易懂程度、亲切感、说服力、是否愿意采纳建议
-        import random
+        age_distribution: Dict[str, int] = {}
+        type_distribution: Dict[str, int] = {}
+        for s in self.scenarios:
+            age = s.get("age_group", "unknown")
+            typ = s.get("type", "unknown")
+            age_distribution[age] = age_distribution.get(age, 0) + 1
+            type_distribution[typ] = type_distribution.get(typ, 0) + 1
 
-        standard_scores = []
-        personalized_scores = []
-
-        for scenario in self.scenarios:
-            random.seed(hash(scenario["id"]) % 10000)
-
-            # 标准模板话术评分（1-5分）
-            std = {
-                "id": scenario["id"],
-                "clarity": round(random.uniform(2.5, 3.5), 1),
-                "warmth": round(random.uniform(2.0, 3.0), 1),
-                "persuasiveness": round(random.uniform(2.5, 3.5), 1),
-                "willingness": round(random.uniform(2.0, 3.0), 1),
-            }
-            std["avg"] = round((std["clarity"] + std["warmth"] + std["persuasiveness"] + std["willingness"]) / 4, 2)
-            standard_scores.append(std)
-
-            # 人群差异化话术评分（1-5分）
-            pers = {
-                "id": scenario["id"],
-                "clarity": round(random.uniform(3.0, 4.0), 1),
-                "warmth": round(random.uniform(3.5, 4.5), 1),
-                "persuasiveness": round(random.uniform(3.0, 4.5), 1),
-                "willingness": round(random.uniform(3.0, 4.5), 1),
-            }
-            pers["avg"] = round((pers["clarity"] + pers["warmth"] + pers["persuasiveness"] + pers["willingness"]) / 4, 2)
-            personalized_scores.append(pers)
-
-        # 汇总
-        std_avg = sum(s["avg"] for s in standard_scores) / len(standard_scores)
-        pers_avg = sum(s["avg"] for s in personalized_scores) / len(personalized_scores)
-        improvement = (pers_avg - std_avg) / std_avg if std_avg > 0 else 0
-
-        logger.info(f"标准模板话术平均分: {std_avg:.2f}/5")
-        logger.info(f"人群差异化话术平均分: {pers_avg:.2f}/5")
-        logger.info(f"接受度提升: {improvement:.2%}")
-
-        logger.info(f"\n各维度对比:")
-        dims = ["clarity", "warmth", "persuasiveness", "willingness"]
-        dim_names = {"clarity": "易懂程度", "warmth": "亲切感", "persuasiveness": "说服力", "willingness": "采纳意愿"}
-        for dim in dims:
-            dim_std = sum(s[dim] for s in standard_scores) / len(standard_scores)
-            dim_pers = sum(s[dim] for s in personalized_scores) / len(personalized_scores)
-            dim_improve = (dim_pers - dim_std) / dim_std if dim_std > 0 else 0
-            logger.info(f"  {dim_names[dim]}: {dim_std:.2f} → {dim_pers:.2f} (+{dim_improve:.2%})")
+        logger.info(f"固定场景: {len(self.scenarios)} 条")
+        logger.info("接受度评分与提升等对照结论: 数据不足（无原始实验日志）")
 
         return {
             "task": "话术接受度评估",
-            "standard_avg": std_avg,
-            "personalized_avg": pers_avg,
-            "improvement": improvement,
+            "standard_avg": None,
+            "personalized_avg": None,
+            "improvement": None,
             "scenarios_count": len(self.scenarios),
+            "status": "数据不足",
+            "reason": "无标准模板与人群差异化话术的 A/B 对照实验原始评分日志，不填充任何评分或提升值",
+            "sample_profile": {
+                "age_group_distribution": age_distribution,
+                "fraud_type_distribution": type_distribution,
+            },
         }
 
 
