@@ -14,6 +14,15 @@ from app.risk_engine.rules import accountant, elderly, student, worker
 
 logger = logging.getLogger(__name__)
 
+# 5 类高危/差异化人群规则模块注册表（可逐一指出，新增人群只需登记一项）
+OCCUPATION_RULE_MODULES = {
+    "student": student,
+    "elderly": elderly,
+    "worker": worker,
+    "accountant": accountant,
+    "child": child,
+}
+
 # 人群分组年龄阈值
 AGE_BOUNDARIES = {
     "student": (6, 22),       # 学生年龄范围
@@ -81,6 +90,9 @@ class UserProfile:
     # 原始行为数据（引用）
     behavior: Optional[UserBehavior] = None
 
+    # 案件类型（可选，参与案件类型动态加权）
+    fraud_type: Optional[str] = None
+
     # 维度权重（根据不同人群动态调整）
     dimension_weights: Dict[str, float] = field(default_factory=lambda: {
         "call": 0.15,
@@ -129,10 +141,16 @@ class UserProfile:
         ]
         return " | ".join(parts)
 
-    def build(self, behavior: UserBehavior, user_id: str) -> UserProfile:
+    def build(
+        self,
+        behavior: UserBehavior,
+        user_id: str,
+        fraud_type: Optional[str] = None,
+    ) -> UserProfile:
         """
         根据用户行为数据构建完整的用户画像
         返回填充完成的 UserProfile 实例
+        fraud_type 为可选案件类型，参与案件类型动态加权。
         """
         logger.info(f"开始构建用户画像: user_id={user_id}")
 
