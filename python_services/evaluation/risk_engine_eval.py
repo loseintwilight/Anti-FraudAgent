@@ -223,23 +223,30 @@ class PersuasionEvaluator:
         }
 
 
+def _write_results(all_results: Dict[str, Any]) -> None:
+    results_dir = Path(__file__).resolve().parent / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    output_path = results_dir / "risk_engine_eval.json"
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(all_results, f, ensure_ascii=False, indent=2, sort_keys=True)
+    print(f"\n评测产物已写入: {output_path}")
+
+
 def main():
     print("=" * 80)
     print("风险引擎分类评测 + 话术接受度评估")
     print("=" * 80)
 
-    # 1. 分类评测
     classifier = FraudClassifierEvaluator()
     samples = classifier.load_test_data()
     classification_results = classifier.evaluate(samples)
 
     print(f"\n分类评测结果: 准确率 {classification_results['accuracy']:.2%}")
 
-    # 2. 话术接受度评估
     persuasion = PersuasionEvaluator()
     persuasion_results = persuasion.evaluate()
 
-    print(f"\n话术接受度评估: 提升 {persuasion_results['improvement']:.2%}")
+    print(f"\n话术接受度评估: 提升 数据不足（{persuasion_results['reason']}）")
 
     insufficient = {
         "persuasion_standard_avg": persuasion_results["reason"],
