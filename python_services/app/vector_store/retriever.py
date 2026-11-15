@@ -209,21 +209,9 @@ class VectorRetriever:
             kwargs: Dict[str, Any] = {
                 "n_results": n_results,
             }
-
-            # 判断查询类型
-            if isinstance(query, str):
-                kwargs["query_texts"] = [query]
-            else:
-                kwargs["query_embeddings"] = [query]
-
-            if where:
-                kwargs["where"] = where
-
-            results = self.collection.query(**kwargs)
-            return results
         except Exception as e:
-            logger.error(f"检索失败: {e}")
-            return {"ids": [], "distances": [], "documents": [], "metadatas": []}
+            logger.error("检索失败: %s", e)
+            return empty
 
     def delete_document(self, document_id: str) -> bool:
         """
@@ -235,8 +223,11 @@ class VectorRetriever:
         返回:
             是否删除成功
         """
-        if self.collection is None:
+        client = self.client
+        if client is None:
             return False
+        try:
+            from qdrant_client.models import PointIdsList
 
             client.delete(
                 collection_name=self.collection_name,
