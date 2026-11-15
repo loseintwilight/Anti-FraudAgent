@@ -9,19 +9,22 @@ import logging
 import uuid
 from typing import Any, Dict, List, Optional, Union
 
+from app.llm.config import LLMConfig
+from app.vector_store import hybrid
+
 logger = logging.getLogger(__name__)
 
 # 默认集合名称
-DEFAULT_COLLECTION_NAME = "anti_fraud_articles"
+DEFAULT_COLLECTION_NAME = hybrid.COLLECTION_NAME
 
-# 默认 ChromaDB 持久化路径
-DEFAULT_PERSIST_DIR = "./chroma_db"
+# 默认 Qdrant 持久化目录
+DEFAULT_PERSIST_DIR = LLMConfig.QDRANT_PATH
 
 
 class VectorRetriever:
     """
     向量检索器
-    使用 ChromaDB 存储和检索向量化文档
+    基于 Qdrant 存储和检索向量化文档
     """
 
     def __init__(
