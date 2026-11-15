@@ -254,24 +254,21 @@ class CrawlerEvaluator:
         is_resumed = total_completed == total_expected
 
         logger.info(f"断点续爬验证: {'成功' if is_resumed else '失败'}")
-        logger.info(f"  已爬取: {len(progress['completed_urls'])}")
-        logger.info(f"  待爬取: {len(remaining)}")
-        logger.info(f"  总计: {total_expected}")
-
-        # 清理测试文件
-        if os.path.exists(progress_file):
-            os.remove(progress_file)
+        logger.info(f"  已处理: {len(completed)}")
+        logger.info(f"  待处理: {len(remaining)}")
+        logger.info(f"  总计: {len(total_urls)}")
 
         return {
             "task": "断点续爬验证",
             "is_resumed": is_resumed,
-            "completed_before": len(progress["completed_urls"]),
+            "completed_before": len(completed),
             "remaining": len(remaining),
-            "total": total_expected,
+            "total": len(total_urls),
+            "method": "对固定序列做确定性集合运算，无文件副作用",
         }
 
     def test_anti_crawl_strategies(self) -> Dict[str, Any]:
-        """验证反爬策略"""
+        """反爬策略记录：生效率无原始实测日志，记为数据不足"""
         logger.info("=" * 60)
         logger.info("反爬策略记录")
         logger.info("=" * 60)
