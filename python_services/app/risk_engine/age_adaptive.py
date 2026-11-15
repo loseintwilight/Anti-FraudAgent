@@ -18,7 +18,7 @@ AGE_GROUPS = {
     "elderly": (51, 150),
 }
 
-# 诈骗类型 × 年龄组 → 权重调整系数
+# 诈骗类型 × 年龄组 → 综合权重调整系数
 AGE_ADAPTIVE_BOOST: Dict[str, Dict[str, float]] = {
     "冒充公检法": {
         "elderly": 1.30,  # 老年人最易受冒充公检法诈骗
@@ -76,6 +76,20 @@ AGE_ADAPTIVE_BOOST: Dict[str, Dict[str, float]] = {
         "student": 1.00,
         "child": 0.95,
     },
+    "钓鱼链接": {
+        "elderly": 1.20,
+        "middle": 1.10,
+        "youth": 1.05,
+        "student": 1.10,
+        "child": 1.15,
+    },
+    "冒充客服": {
+        "youth": 1.20,
+        "middle": 1.15,
+        "student": 1.10,
+        "elderly": 1.05,
+        "child": 0.85,
+    },
     "default": {
         "elderly": 1.15,
         "middle": 1.05,
@@ -83,6 +97,53 @@ AGE_ADAPTIVE_BOOST: Dict[str, Dict[str, float]] = {
         "student": 0.95,
         "child": 0.90,
     },
+}
+
+# 年龄组 → 各维度权重系数（仅登记偏离 1.0 的维度，其余按 1.0 处理）
+AGE_DIMENSION_FACTORS: Dict[str, Dict[str, float]] = {
+    "child": {
+        "call": 0.85, "sms": 0.85, "transaction": 0.70,
+        "app": 1.25, "network": 1.20,
+    },
+    "student": {
+        "call": 0.90, "sms": 1.15, "app": 1.20, "network": 1.15,
+    },
+    "youth": {},
+    "middle": {
+        "transaction": 1.15, "network": 1.05,
+    },
+    "elderly": {
+        "call": 1.30, "sms": 0.90, "transaction": 1.20,
+        "app": 0.85, "network": 1.15, "device": 1.10,
+    },
+}
+
+# 案件类型 → 各维度权重系数（配置化、可扩展；仅登记偏离 1.0 的维度）
+# 新增案件类型只需在此登记一项（或在 CASE_TYPE_ALIASES 增加别名）
+CASE_TYPE_DIMENSION_FACTORS: Dict[str, Dict[str, float]] = {
+    "刷单返利": {"sms": 1.20, "transaction": 1.25, "app": 1.20},
+    "冒充公检法": {"call": 1.35, "sms": 1.10, "transaction": 1.25, "reported": 1.10},
+    "杀猪盘": {"call": 1.15, "sms": 1.10, "transaction": 1.30, "app": 1.05, "network": 1.10},
+    "钓鱼链接": {"call": 0.95, "sms": 1.35, "app": 1.10, "network": 1.35, "device": 1.15},
+    "虚假投资": {"call": 1.05, "transaction": 1.35, "app": 1.20, "network": 1.10, "account": 1.10},
+    "虚假贷款": {"call": 1.10, "sms": 1.10, "transaction": 1.25, "app": 1.10, "account": 1.20},
+    "冒充客服": {"call": 1.20, "sms": 1.15, "transaction": 1.20, "app": 1.05},
+    "客服退款": {"call": 1.20, "sms": 1.15, "transaction": 1.20, "app": 1.05},
+    "游戏交易": {"call": 0.90, "sms": 1.15, "transaction": 1.20, "app": 1.30, "network": 1.15},
+    "AI合成诈骗": {"call": 1.20, "sms": 1.10, "transaction": 1.15, "app": 1.10, "network": 1.20, "device": 1.15},
+    "default": {},
+}
+
+# 案件类型别名 → 配置表键（便于扩展，未登记类型回落 default）
+CASE_TYPE_ALIASES: Dict[str, str] = {
+    "刷单": "刷单返利", "兼职刷单": "刷单返利", "刷单兼职": "刷单返利",
+    "钓鱼": "钓鱼链接", "钓鱼网站": "钓鱼链接", "钓鱼短信": "钓鱼链接", "链接": "钓鱼链接",
+    "公检法": "冒充公检法", "冒充警察": "冒充公检法", "安全账户": "冒充公检法",
+    "投资": "虚假投资", "投资理财": "虚假投资", "杀猪": "杀猪盘", "网恋投资": "杀猪盘",
+    "贷款": "虚假贷款", "客服": "冒充客服", "退款": "客服退款",
+    "游戏": "游戏交易", "游戏充值": "游戏交易",
+    "未知": "default", "可疑": "default", "其他": "default",
+    "": "default", "default": "default",
 }
 
 
@@ -103,7 +164,7 @@ def get_adaptive_boost(fraud_type: str, age: int) -> float:
         age: 用户年龄
 
     返回:
-        调权系数 (1.0 为基准，>1.0 为提高置信度)
+        调权系数 (1.0 为基准，>1.0 为提高风险权重)
     """
     age_group = get_age_group(age)
     type_boosts = AGE_ADAPTIVE_BOOST.get(fraud_type, AGE_ADAPTIVE_BOOST["default"])
