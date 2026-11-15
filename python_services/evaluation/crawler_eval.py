@@ -147,7 +147,6 @@ class CrawlerEvaluator:
         logger.info("开始AI爬虫噪音过滤评测")
         logger.info("=" * 60)
 
-        # 模拟AI爬虫过滤逻辑：基于关键词判断
         NOISE_KEYWORDS = [
             "广告", "推荐", "导航", "评论", "点赞", "免责声明", "Copyright",
             "网站地图", "隐私政策", "阅读量", "扫码", "关注公众号", "分享到",
@@ -165,7 +164,7 @@ class CrawlerEvaluator:
         ]
 
         def is_noise(content: str) -> bool:
-            """AI爬虫过滤逻辑：大模型语义理解 + 关键词兜底"""
+            """按噪音词/有效词计数做确定性规则判定"""
             noise_score = sum(1 for kw in NOISE_KEYWORDS if kw in content)
             valid_score = sum(1 for kw in VALID_KEYWORDS if kw in content)
             if valid_score > 0:
@@ -216,42 +215,15 @@ class CrawlerEvaluator:
         }
 
     def test_breakpoint_resume(self) -> Dict[str, Any]:
-        """验证断点续爬机制"""
+        """断点续爬逻辑验证：对固定 URL 序列做确定性集合运算"""
         logger.info("=" * 60)
         logger.info("开始断点续爬验证")
         logger.info("=" * 60)
 
-        # 模拟断点续爬逻辑
-        mock_task_id = "crawl_20260812_001"
-        mock_urls = [f"https://example.com/page_{i}" for i in range(1, 21)]
-        progress_file = os.path.join(
-            os.path.dirname(__file__), "test_data", f"crawl_progress_{mock_task_id}.json"
-        )
-
-        # 模拟第一次爬取（爬了前10个URL后中断）
-        progress = {
-            "task_id": mock_task_id,
-            "total_urls": len(mock_urls),
-            "completed_urls": [f"https://example.com/page_{i}" for i in range(1, 11)],
-            "status": "interrupted",
-            "last_updated": time.strftime("%Y-%m-%d %H:%M:%S"),
-        }
-        with open(progress_file, "w", encoding="utf-8") as f:
-            json.dump(progress, f, ensure_ascii=False, indent=2)
-
-        logger.info(f"模拟中断: 已爬取 {len(progress['completed_urls'])}/{len(mock_urls)} 个URL")
-
-        # 模拟重启后从断点继续
-        remaining = [
-            url for url in mock_urls
-            if url not in progress["completed_urls"]
-        ]
-        logger.info(f"断点续爬: 剩余 {len(remaining)} 个URL待爬取")
-
-        # 验证断点续爬
-        total_expected = len(mock_urls)
-        total_completed = len(progress["completed_urls"]) + len(remaining)
-        is_resumed = total_completed == total_expected
+        total_urls = [f"page_{i:02d}" for i in range(1, 21)]
+        completed = total_urls[:10]
+        remaining = [url for url in total_urls if url not in completed]
+        is_resumed = len(completed) + len(remaining) == len(total_urls)
 
         logger.info(f"断点续爬验证: {'成功' if is_resumed else '失败'}")
         logger.info(f"  已处理: {len(completed)}")
