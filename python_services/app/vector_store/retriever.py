@@ -115,32 +115,17 @@ class VectorRetriever:
         if self.collection is None:
             logger.warning("集合不可用，无法添加文档")
             return False
-
-        doc_id = document_id or str(uuid.uuid4())
-        metadata = metadata or {}
-
-        try:
-            if embedding:
-                # 直接使用提供的向量
-                self.collection.add(
-                    ids=[doc_id],
-                    documents=[text],
-                    metadatas=[metadata],
-                    embeddings=[embedding],
-                )
-            else:
-                # 不传向量，让 ChromaDB 使用其内置的 all-MiniLM-L6-v2
-                self.collection.add(
-                    ids=[doc_id],
-                    documents=[text],
-                    metadatas=[metadata],
-                )
-
-            logger.debug(f"文档添加成功: id={doc_id}")
-            return True
-        except Exception as e:
-            logger.error(f"添加文档失败: {e}")
-            return False
+        count = hybrid.upsert_documents(
+            [
+                {
+                    "id": document_id,
+                    "text": text,
+                    "metadata": metadata or {},
+                    "embedding": embedding,
+                }
+            ]
+        )
+        return count > 0
 
     def add_documents(
         self,
@@ -159,19 +144,20 @@ class VectorRetriever:
         """
         if not documents:
             return 0
-
-        if self.collection is None:
-            logger.warning("集合不可用，无法批量添加文档")
+        if self.client is None:
+            logger.warning("Qdrant 客户端不可用，无法批量添加文档")
             return 0
 
-        success_count = 0
+        payloads = []
         for i, doc in enumerate(documents):
             embedding = embeddings[i] if embeddings and i < len(embeddings) else None
-            ok = self.add_document(
-                document_id=doc.get("id"),
-                text=doc.get("text", ""),
-                metadata=doc.get("metadata"),
-                embedding=embedding,
+            payloads.append(
+                {
+                    "id": doc.get("id"),
+                    "text": doc.get("text", ""),
+                    "metadata": doc.get("metadata") or {},
+                    "embedding": embedding,
+                }
             )
         success_count = hybrid.upsert_documents(payloads)
         logger.info("批量写入知识条目: %d/%d 成功", success_count, len(documents))
