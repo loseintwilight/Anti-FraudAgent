@@ -1,19 +1,15 @@
 """
-综合指标报告生成器
-运行所有评测模块，生成简历对照报告
-- 每个评测结果都记录到 metrics_tracker
-- 产出一份完整的 "简历数字 vs 实际数据" 对照表
+综合指标报告
+读取 evaluation/results/ 下的评测产物，只呈现其中真实存在的结果，
+对产物中标注为数据不足的指标集中说明。
 """
 from __future__ import annotations
 
 import json
 import logging
-import os
 import sys
-import time
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
