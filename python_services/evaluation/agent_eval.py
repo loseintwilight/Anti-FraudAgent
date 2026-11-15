@@ -20,13 +20,9 @@ logger = logging.getLogger(__name__)
 class AgentReflectionEvaluator:
     """Agent 反思机制评测器"""
 
-    def __init__(self):
-        self.results: List[Dict[str, Any]] = []
-
     def load_risk_cases(self) -> List[Dict[str, Any]]:
-        """加载风险判定案例（30-50条）"""
+        """加载风险判定固定样本"""
         return [
-            # 正确的判定案例（15条）
             {"id": "rc_001", "scenario": "有人让我下载APP投资，承诺日收益20%", "true_risk": "high", "true_type": "虚假投资", "correct_judgment": True},
             {"id": "rc_002", "scenario": "收到短信称ETC过期需重新认证", "true_risk": "high", "true_type": "钓鱼链接", "correct_judgment": True},
             {"id": "rc_003", "scenario": "网上认识的人说带我赚钱，先让我转1000元", "true_risk": "high", "true_type": "杀猪盘", "correct_judgment": True},
@@ -42,7 +38,6 @@ class AgentReflectionEvaluator:
             {"id": "rc_013", "scenario": "有陌生人加微信推荐股票内部消息", "true_risk": "high", "true_type": "虚假投资", "correct_judgment": True},
             {"id": "rc_014", "scenario": "收到短信称银行卡境外消费需确认", "true_risk": "high", "true_type": "冒充银行", "correct_judgment": True},
             {"id": "rc_015", "scenario": "有人打电话说社保卡异常需处理", "true_risk": "high", "true_type": "冒充社保", "correct_judgment": True},
-            # 错误的判定案例（15条，模拟Agent可能误判的场景）
             {"id": "rc_016", "scenario": "收到一个正经的银行活动通知短信", "true_risk": "low", "true_type": "正常", "correct_judgment": False, "expected_misjudge": "high"},
             {"id": "rc_017", "scenario": "朋友推荐了一个正规的理财平台", "true_risk": "low", "true_type": "正常", "correct_judgment": False, "expected_misjudge": "mid"},
             {"id": "rc_018", "scenario": "公司HR让下载企业办公软件", "true_risk": "low", "true_type": "正常", "correct_judgment": False, "expected_misjudge": "high"},
