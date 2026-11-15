@@ -1,15 +1,14 @@
 """
 Agent 反思机制评测 + 幻觉率评测
-评测指标：反思机制误判降低率、幻觉率降低比例
+固定样本概况做确定性统计；对照实验类结论无原始日志支撑时记为数据不足。
 """
 from __future__ import annotations
 
 import json
 import logging
-import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
