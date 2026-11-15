@@ -200,10 +200,11 @@ class MemorySystemTester:
             "persisted": is_persisted,
             "profile_fields": list(user_profile.keys()),
             "detection_history_count": len(user_profile["detection_history"]),
+            "method": "固定画像的 JSON 序列化往返比对，无文件副作用",
         }
 
     def test_memory_update(self) -> Dict[str, Any]:
-        """记忆更新测试：验证正确更新而非覆盖"""
+        """记忆更新确定性验证：检查追加而非覆盖"""
         logger.info("=" * 60)
         logger.info("记忆系统测试 - 记忆更新")
         logger.info("=" * 60)
@@ -214,7 +215,6 @@ class MemorySystemTester:
             "detection_history": [{"date": "2026-08-01", "type": "刷单返利"}],
         }
 
-        # 新增检测记录
         updated = dict(original)
         updated["detection_history"] = original["detection_history"] + [
             {"date": "2026-08-10", "type": "客服退款"}
@@ -225,8 +225,6 @@ class MemorySystemTester:
 
         logger.info(f"记忆追加: {'正确' if is_appended else '失败'}")
         logger.info(f"未覆盖: {'正确' if is_not_overwritten else '失败'}")
-        logger.info(f"  原始记录: {len(original['detection_history'])}条")
-        logger.info(f"  更新后: {len(updated['detection_history'])}条")
 
         return {
             "task": "记忆更新测试",
