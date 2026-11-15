@@ -61,7 +61,6 @@ class FraudClassifierEvaluator:
         logger.info("开始诈骗分类评测")
         logger.info("=" * 60)
 
-        # 按类别统计
         class_stats = {}
         confusion = {}
         correct = 0
@@ -78,7 +77,6 @@ class FraudClassifierEvaluator:
             if is_correct:
                 correct += 1
 
-            # 类别统计
             if true_type not in class_stats:
                 class_stats[true_type] = {"tp": 0, "fp": 0, "fn": 0, "total": 0}
             class_stats[true_type]["total"] += 1
@@ -90,11 +88,9 @@ class FraudClassifierEvaluator:
                     class_stats[predicted] = {"tp": 0, "fp": 0, "fn": 0, "total": 0}
                 class_stats[predicted]["fp"] += 1
 
-            # 混淆矩阵
             key = f"{true_type}->{predicted}"
             confusion[key] = confusion.get(key, 0) + 1
 
-            # Bad Case
             if not is_correct:
                 bad_cases.append({
                     "id": sample["id"],
