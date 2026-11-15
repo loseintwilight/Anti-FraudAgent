@@ -1,12 +1,11 @@
 """
 向量存储与检索模块
-使用 ChromaDB 实现向量存储和相似度检索
+基于 Qdrant 本地持久化实现向量存储与相似度检索。
+底层客户端与混合检索模块（hybrid）共享单例，避免本地存储被重复打开。
 """
-
 from __future__ import annotations
 
 import logging
-import uuid
 from typing import Any, Dict, List, Optional, Union
 
 from app.llm.config import LLMConfig
