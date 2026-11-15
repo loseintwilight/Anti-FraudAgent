@@ -238,27 +238,26 @@ class VectorRetriever:
         if self.collection is None:
             return False
 
-        try:
-            self.collection.delete(ids=[document_id])
-            logger.debug(f"文档删除成功: id={document_id}")
+            client.delete(
+                collection_name=self.collection_name,
+                points_selector=PointIdsList(
+                    points=[hybrid.to_point_id(document_id)]
+                ),
+            )
+            logger.debug("文档删除成功: id=%s", document_id)
             return True
         except Exception as e:
-            logger.error(f"删除文档失败: {e}")
+            logger.error("删除文档失败: %s", e)
             return False
 
     def get_collection_stats(self) -> Dict[str, Any]:
         """获取集合统计信息"""
-        if self.collection is None:
+        count = hybrid.collection_count()
+        if count is None:
             return {"status": "unavailable", "count": 0}
-
-        try:
-            count = self.collection.count()
-            return {
-                "status": "available",
-                "count": count,
-                "collection_name": self.collection_name,
-                "persist_directory": self.persist_directory,
-            }
-        except Exception as e:
-            logger.error(f"获取集合统计失败: {e}")
-            return {"status": "error", "count": 0, "error": str(e)}
+        return {
+            "status": "available",
+            "count": count,
+            "collection_name": self.collection_name,
+            "persist_directory": self.persist_directory,
+        }
