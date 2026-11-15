@@ -44,43 +44,35 @@ def run_cross_image_eval() -> Dict[str, Any]:
     logger.info("【P1】跨图识别评测")
     logger.info("=" * 60)
 
-    data = _load_test_data("cross_image_eval.json")
-    samples = data.get("samples", [])
-    if not samples:
-        return {"accuracy": 0, "total": 0, "correct": 0}
 
-    # 模拟评测逻辑（实际使用 MultimodalEngine）
-    # 这里基于规则进行快速验证
-    correct = 0
-    bad_cases = []
+def generate_report() -> Dict[str, Any]:
+    """汇总评测产物：呈现真实结果，标注数据不足的指标。"""
+    artifacts = _load_artifacts()
+    all_metrics: Dict[str, Any] = {}
+    sections: Dict[str, Any] = {}
+    insufficient: Dict[str, str] = {}
 
-    for sample in samples:
-        expected = sample.get("expected", {})
-        # 模拟：多图+诈骗关键词 → 正确识别
-        text = sample.get("text", "")
-        is_fraud = expected.get("is_fraud", False)
+    for name, data in artifacts.items():
+        metrics = data["metrics"]
+        all_metrics.update(metrics)
+        sections[name] = {
+            "eval": data.get("eval", name),
+            "source_files": data.get("source_files", []),
+            "method": data.get("method", ""),
+            "metrics": metrics,
+        }
+        reasons = data.get("insufficient")
+        if isinstance(reasons, dict):
+            for key, reason in reasons.items():
+                if isinstance(reason, str):
+                    insufficient[key] = reason
 
-        # 简单规则模拟
-        fraud_keywords = ["投资", "转账", "退款", "贷款", "刷单", "公安局", "杀猪盘", "AI换脸"]
-        detected_fraud = any(kw in text for kw in fraud_keywords)
-
-        if detected_fraud == is_fraud:
-            correct += 1
-        else:
-            bad_cases.append({
-                "id": sample.get("id"),
-                "text": text[:100],
-                "expected": expected,
-                "detected": detected_fraud,
-            })
-
-    accuracy = correct / len(samples) * 100 if samples else 0
-    logger.info(f"跨图识别: 准确率 = {accuracy:.1f}% ({correct}/{len(samples)})")
-    logger.info(f"Bad Cases: {len(bad_cases)}")
-
-    # 记录到集中式指标追踪器
-    metrics_tracker.record_eval_result("cross_image", {"accuracy": round(accuracy, 1)})
-    metrics_tracker.save()
+    measured = {k: v for k, v in all_metrics.items() if v is not None}
+    for key, value in all_metrics.items():
+        if value is None:
+            insufficient.setdefault(
+                key, "评测产物中该指标为 null，无原始实验日志支撑"
+            )
 
     return {
         "schema_version": "1.0",
