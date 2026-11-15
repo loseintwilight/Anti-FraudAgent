@@ -97,73 +97,37 @@ class AgentReflectionEvaluator:
         logger.info("开始反思机制评测")
         logger.info("=" * 60)
 
-        # 模拟：无反思时的判定结果
-        no_reflection = {
-            "correct": 0,
-            "incorrect": 0,
-            "details": [],
-        }
-        # 模拟：有反思时的判定结果
-        with_reflection = {
-            "correct": 0,
-            "incorrect": 0,
-            "corrected": 0,
-            "new_errors": 0,
-            "details": [],
-        }
-
-        import random
-        for case in cases:
-            random.seed(hash(case["id"]) % 10000)
-
-            # 模拟无反思：正确率75%
-            no_ref_correct = random.random() < 0.75
-            if no_ref_correct:
-                no_reflection["correct"] += 1
-            else:
-                no_reflection["incorrect"] += 1
-
-            # 模拟有反思：正确率提升到85%
-            ref_correct = random.random() < 0.85
-            if ref_correct:
-                with_reflection["correct"] += 1
-                if not no_ref_correct:
-                    with_reflection["corrected"] += 1
-            else:
-                with_reflection["incorrect"] += 1
-                if no_ref_correct:
-                    with_reflection["new_errors"] += 1
-
-            with_reflection["details"].append({
-                "id": case["id"],
-                "scenario": case["scenario"],
-                "no_reflection_correct": no_ref_correct,
-                "with_reflection_correct": ref_correct,
-            })
-
         total = len(cases)
-        no_ref_acc = no_reflection["correct"] / total
-        with_ref_acc = with_reflection["correct"] / total
-        misjudge_reduction = (no_reflection["incorrect"] - with_reflection["incorrect"]) / max(no_reflection["incorrect"], 1)
+        risk_distribution: Dict[str, int] = {}
+        labeled_correct = 0
+        for case in cases:
+            risk = case.get("true_risk", "unknown")
+            risk_distribution[risk] = risk_distribution.get(risk, 0) + 1
+            if case.get("correct_judgment"):
+                labeled_correct += 1
 
-        logger.info(f"无反思: 正确{no_reflection['correct']}/{total} ({no_ref_acc:.2%})")
-        logger.info(f"有反思: 正确{with_reflection['correct']}/{total} ({with_ref_acc:.2%})")
-        logger.info(f"反思纠正: {with_reflection['corrected']} 条")
-        logger.info(f"反思引入新错误: {with_reflection['new_errors']} 条")
-        logger.info(f"误判率降低: {misjudge_reduction:.2%}")
+        logger.info(f"固定样本: {total} 条, 标注正确判定 {labeled_correct} 条")
+        logger.info("误判率降低等对照结论: 数据不足（无原始实验日志）")
 
         return {
             "task": "反思机制评测",
             "total": total,
-            "no_reflection_accuracy": no_ref_acc,
-            "with_reflection_accuracy": with_ref_acc,
-            "misjudge_reduction": misjudge_reduction,
-            "corrected_count": with_reflection["corrected"],
-            "new_errors_count": with_reflection["new_errors"],
+            "no_reflection_accuracy": None,
+            "with_reflection_accuracy": None,
+            "misjudge_reduction": None,
+            "corrected_count": None,
+            "new_errors_count": None,
+            "status": "数据不足",
+            "reason": "无反思链路开启/关闭的 A/B 对照实验原始日志，不填充任何对照结论",
+            "sample_profile": {
+                "true_risk_distribution": risk_distribution,
+                "labeled_correct_judgment": labeled_correct,
+                "labeled_incorrect_judgment": total - labeled_correct,
+            },
         }
 
     def evaluate_hallucination(self, cases: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """评测幻觉率"""
+        """幻觉率评测：无约束前后对照实验原始日志，结论指标记为数据不足。"""
         logger.info("=" * 60)
         logger.info("幻觉率评测（固定样本概况统计）")
         logger.info("=" * 60)
