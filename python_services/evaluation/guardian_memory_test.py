@@ -259,17 +259,33 @@ def main():
     long_term = memory.test_long_term_memory()
     update_test = memory.test_memory_update()
 
-    print(f"\n记忆系统结果:")
+    print("\n记忆系统结果:")
     print(f"  短期记忆: {'正确' if short_term['memory_correct'] else '失败'}")
-    print(f"  长期记忆: {'持久化成功' if long_term['persisted'] else '失败'}")
+    print(f"  长期记忆: {'往返一致' if long_term['persisted'] else '失败'}")
     print(f"  记忆更新: {'正确追加' if update_test['appended'] else '覆盖错误'}")
 
-    # 保存结果
+    insufficient = {
+        "guardian_notification_p50_latency": normal_result["reason"],
+        "guardian_notification_p99_latency": normal_result["reason"],
+        "guardian_notification_avg_latency": normal_result["reason"],
+    }
+
     all_results = {
-        "guardian_notification": {
-            "normal": normal_result,
-            "abnormal": abnormal_result,
-            "retry": retry_result,
+        "schema_version": "1.0",
+        "eval": "guardian_memory_test",
+        "source_files": ["evaluation/guardian_memory_test.py"],
+        "method": (
+            "通知延迟与异常/重试结论需线上运行日志，记为 null 并标注数据不足；"
+            "记忆系统的短期/长期/更新验证为固定数据的确定性逻辑计算"
+        ),
+        "metrics": {
+            "guardian_notification_p50_latency": None,
+            "guardian_notification_p99_latency": None,
+            "guardian_notification_avg_latency": None,
+            "short_term_memory_correct": short_term["memory_correct"],
+            "long_term_memory_persisted": long_term["persisted"],
+            "memory_update_appended": update_test["appended"],
+            "memory_update_not_overwritten": update_test["not_overwritten"],
         },
         "details": {
             "guardian_notification": {
