@@ -300,17 +300,13 @@ def main():
 
     evaluator = CrawlerEvaluator()
 
-    # 1. 噪音过滤评测
     print("\n[1] 噪音过滤评测...")
     noise_samples = evaluator.load_noise_test_data()
     noise_results = evaluator.evaluate_noise_filter(noise_samples)
-
     print(f"\n噪音过滤结果: 精确率={noise_results['precision']:.2%}, 误杀率={noise_results['false_kill_rate']:.2%}")
 
-    # 2. 断点续爬验证
     print("\n[2] 断点续爬验证...")
     breakpoint_results = evaluator.test_breakpoint_resume()
-
     print(f"断点续爬: {'成功' if breakpoint_results['is_resumed'] else '失败'}")
 
     print("\n[3] 反爬策略记录...")
