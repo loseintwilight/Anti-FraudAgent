@@ -50,48 +50,8 @@ class VectorRetriever:
 
     @property
     def collection(self):
-        """懒加载集合"""
-        if self._collection is None:
-            self._init_collection()
-        return self._collection
-
-    def _init_client(self) -> None:
-        """初始化 ChromaDB 客户端"""
-        try:
-            import chromadb
-            self._client = chromadb.PersistentClient(
-                path=self.persist_directory
-            )
-            logger.info(
-                f"ChromaDB 客户端已初始化: {self.persist_directory}"
-            )
-        except ImportError:
-            logger.warning("chromadb 未安装，使用内存模式")
-            self._client = None
-        except Exception as e:
-            logger.error(f"初始化 ChromaDB 失败: {e}")
-            self._client = None
-
-    def _init_collection(self) -> None:
-        """获取或创建集合"""
-        if self._client is None:
-            logger.warning("ChromaDB 客户端不可用，跳过集合初始化")
-            return
-
-        try:
-            # 尝试获取已有集合
-            self._collection = self._client.get_collection(self.collection_name)
-            logger.info(f"获取已有集合: {self.collection_name}")
-        except Exception:
-            # 不存在则创建
-            try:
-                self._collection = self._client.create_collection(
-                    self.collection_name
-                )
-                logger.info(f"创建新集合: {self.collection_name}")
-            except Exception as e:
-                logger.error(f"创建集合失败: {e}")
-                self._collection = None
+        """集合标识：Qdrant 以集合名操作，客户端可用时返回集合名以兼容旧接口"""
+        return self.collection_name if self.client is not None else None
 
     def add_document(
         self,
@@ -104,16 +64,16 @@ class VectorRetriever:
         添加单个文档到向量存储
 
         参数:
-            document_id: 文档 ID，若不提供则自动生成
+            document_id: 文档 ID，若不提供则按文本生成稳定 ID
             text: 文档文本内容
             metadata: 文档元数据
-            embedding: 文档向量，若不提供则需先实例化 embedder
+            embedding: 文档向量，若不提供则使用 TextEmbedder 生成
 
         返回:
             是否添加成功
         """
-        if self.collection is None:
-            logger.warning("集合不可用，无法添加文档")
+        if self.client is None:
+            logger.warning("Qdrant 客户端不可用，无法添加文档")
             return False
         count = hybrid.upsert_documents(
             [
