@@ -21,43 +21,27 @@ class GuardianNotificationTester:
     """监护人通知链路测试器"""
 
     def test_normal_notification(self) -> Dict[str, Any]:
-        """正常场景：模拟老年用户触发高风险，测量通知延迟"""
+        """通知延迟需线上链路计时日志；无日志时记为数据不足。"""
         logger.info("=" * 60)
         logger.info("监护人通知链路测试 - 正常场景")
         logger.info("=" * 60)
-
-        notification_latencies = []
-        for i in range(10):
-            start = time.time()
-            # 模拟通知链路
-            time.sleep(0.3)  # 模拟风险判定
-            time.sleep(0.5)  # 模拟通知推送
-            latency = time.time() - start
-            notification_latencies.append(latency)
-
-        latencies_sorted = sorted(notification_latencies)
-        p50 = latencies_sorted[int(len(latencies_sorted) * 0.5)]
-        p99 = latencies_sorted[int(len(latencies_sorted) * 0.99)]
-        avg = sum(notification_latencies) / len(notification_latencies)
-
-        logger.info(f"正常通知延迟: P50={p50:.3f}s, P99={p99:.3f}s, 平均={avg:.3f}s")
-        logger.info(f"是否 <10s: {'是' if max(notification_latencies) < 10 else '否'}")
-
-        is_pass = p99 < 10
+        logger.info("通知延迟指标: 数据不足（无原始计时日志）")
 
         return {
             "task": "监护人通知-正常场景",
-            "samples": 10,
-            "p50_latency": p50,
-            "p99_latency": p99,
-            "avg_latency": avg,
-            "max_latency": max(notification_latencies),
-            "passed": is_pass,
-            "threshold": 10,
+            "samples": None,
+            "p50_latency": None,
+            "p99_latency": None,
+            "avg_latency": None,
+            "max_latency": None,
+            "passed": None,
+            "threshold": None,
+            "status": "数据不足",
+            "reason": "无通知链路真实计时日志，不填充任何延迟数字或阈值",
         }
 
     def test_abnormal_scenario(self) -> Dict[str, Any]:
-        """异常场景：模拟通知渠道不可用"""
+        """异常场景预期行为记录；验证结论无原始运行日志，记为数据不足。"""
         logger.info("=" * 60)
         logger.info("监护人通知链路测试 - 异常场景")
         logger.info("=" * 60)
