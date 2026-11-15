@@ -33,19 +33,18 @@ class VectorRetriever:
         初始化检索器
 
         参数:
-            collection_name: ChromaDB 集合名称
+            collection_name: Qdrant 集合名称
             persist_directory: 持久化存储目录
         """
         self.collection_name = collection_name
         self.persist_directory = persist_directory
         self._client = None
-        self._collection = None
 
     @property
     def client(self):
-        """懒加载 ChromaDB 客户端"""
+        """懒加载 Qdrant 客户端（与混合检索共享单例）"""
         if self._client is None:
-            self._init_client()
+            self._client = hybrid.get_client()
         return self._client
 
     @property
