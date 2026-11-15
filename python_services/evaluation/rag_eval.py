@@ -16,15 +16,23 @@ from typing import Any, Dict, List, Optional
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from langchain_core.documents import Document
-from langchain_chroma import Chroma
-from langchain_dashscope import DashScopeEmbeddings
-
-from app.llm.config import LLMConfig
 from app.llm.rag_agent import RAGAgent
+from app.vector_store.hybrid import HybridRetriever
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+
+
+def _hybrid_to_rows(docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """把混合检索结果转换为评测所需的 text/metadata/score 行。"""
+    return [
+        {
+            "text": d.get("page_content", ""),
+            "metadata": d.get("metadata", {}),
+            "score": d.get("score", 0.0),
+        }
+        for d in docs
+    ]
 
 
 class RAGEvaluator:
@@ -172,19 +180,11 @@ class RAGEvaluator:
 
             try:
                 rewritten = self.rag_agent.rewrite_query(query)
-                # 模拟历史上下文检索
-                if self.rag_agent.vector_store is not None:
-                    retriever = self.rag_agent.vector_store.as_retriever(
-                        search_type="similarity",
-                        search_kwargs={"k": 10},
-                    )
-                    retrieved = retriever.invoke(rewritten)
-                    retrieved = [
-                        {"text": doc.page_content, "metadata": doc.metadata}
-                        for doc in retrieved
-                    ]
-                else:
-                    retrieved = []
+                # 历史感知检索：把本轮问题作为历史上下文（构造追问场景），暂不启用精排
+                docs = HybridRetriever(enable_rerank=False).retrieve(
+                    rewritten, top_k=10, history=[query]
+                )
+                retrieved = _hybrid_to_rows(docs)
             except Exception as e:
                 logger.warning(f"历史感知检索失败 [{sample['id']}]: {e}")
                 retrieved = []
