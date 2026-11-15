@@ -277,18 +277,29 @@ def main():
     print(f"AI合成检测结果: 检出率 {synthesis_results['detection_rate']:.2%}, 误报率 {synthesis_results['false_positive_rate']:.2%}")
     print(f"{'='*80}")
 
-    # 保存结果
     all_results = {
-        "intent_recognition": intent_results,
-        "ai_synthesis_detection": synthesis_results,
+        "schema_version": "1.0",
+        "eval": "multimodal_eval",
+        "source_files": ["test_data/multimodal_eval.json"],
+        "method": (
+            "对固定标注样本的确定性关键词规则判定：意图三分类按关键词表匹配，"
+            "AI合成检测按描述中伪影特征词判定，均非模型推理"
+        ),
+        "metrics": {
+            "intent_accuracy": round(intent_results["accuracy"], 6),
+            "ai_synthesis_detection_rate": round(synthesis_results["detection_rate"], 6),
+            "ai_synthesis_false_positive_rate": round(synthesis_results["false_positive_rate"], 6),
+            "ai_synthesis_precision": round(synthesis_results["precision"], 6),
+            "ai_synthesis_recall": round(synthesis_results["recall"], 6),
+            "ai_synthesis_f1": round(synthesis_results["f1"], 6),
+        },
+        "details": {
+            "intent_recognition": intent_results,
+            "ai_synthesis_detection": synthesis_results,
+        },
+        "insufficient": {},
     }
-    output_path = os.path.join(
-        os.path.dirname(__file__), "test_data", "multimodal_eval_results.json"
-    )
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(all_results, f, ensure_ascii=False, indent=2)
-
-    print(f"\n评测结果已保存到: {output_path}")
+    _write_results(all_results)
 
 
 if __name__ == "__main__":
