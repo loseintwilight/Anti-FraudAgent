@@ -107,7 +107,6 @@ class FraudClassifierEvaluator:
         accuracy = correct / total if total > 0 else 0
 
         logger.info(f"总样本: {total}, 正确: {correct}, 准确率: {accuracy:.2%}")
-        logger.info(f"\n各类别指标:")
 
         class_report = {}
         for cls, stats in sorted(class_stats.items()):
@@ -120,13 +119,7 @@ class FraudClassifierEvaluator:
             class_report[cls] = {"precision": precision, "recall": recall, "f1": f1, "total": stats["total"]}
             logger.info(f"  {cls}: P={precision:.2%} R={recall:.2%} F1={f1:.2%} ({stats['total']}条)")
 
-        logger.info(f"\n混淆矩阵:")
-        for k, v in sorted(confusion.items(), key=lambda x: -x[1]):
-            logger.info(f"  {k}: {v}")
-
-        logger.info(f"\nBad Case ({len(bad_cases)}条):")
-        for bc in bad_cases[:10]:
-            logger.info(f"  [{bc['id']}] '{bc['scenario'][:40]}' 真实={bc['true_type']} 预测={bc['predicted']}")
+        logger.info(f"Bad Case ({len(bad_cases)}条)")
 
         return {
             "task": "诈骗分类评测",
@@ -159,9 +152,9 @@ class PersuasionEvaluator:
         ]
 
     def evaluate(self) -> Dict[str, Any]:
-        """A/B对比评估话术接受度"""
+        """话术接受度评估：无 A/B 对照实验原始日志，结论指标记为数据不足。"""
         logger.info("=" * 60)
-        logger.info("开始话术接受度 A/B 对比评估")
+        logger.info("话术接受度评估（固定场景概况统计）")
         logger.info("=" * 60)
 
         age_distribution: Dict[str, int] = {}
