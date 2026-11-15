@@ -220,23 +220,49 @@ def main():
     hallucination_cases = evaluator.load_hallucination_cases()
     hallucination_results = evaluator.evaluate_hallucination(hallucination_cases)
 
-    print(f"\n幻觉率评测结果:")
-    print(f"  无RAG幻觉率: {hallucination_results['no_rag_hallucination_rate']:.2%}")
-    print(f"  有RAG幻觉率: {hallucination_results['with_rag_hallucination_rate']:.2%}")
-    print(f"  幻觉率降低: {hallucination_results['hallucination_reduction']:.2%}")
+    print("\n幻觉率评测结果:")
+    print(f"  固定样本: {hallucination_results['total']} 条")
+    print(f"  幻觉率降低: 数据不足（{hallucination_results['reason']}）")
 
-    # 保存结果
-    all_results = {
-        "reflection": reflection_results,
-        "hallucination": hallucination_results,
+    insufficient = {
+        "misjudge_reduction": reflection_results["reason"],
+        "no_reflection_accuracy": reflection_results["reason"],
+        "with_reflection_accuracy": reflection_results["reason"],
+        "corrected_count": reflection_results["reason"],
+        "new_errors_count": reflection_results["reason"],
+        "hallucination_reduction": hallucination_results["reason"],
+        "no_rag_hallucination_rate": hallucination_results["reason"],
+        "with_rag_hallucination_rate": hallucination_results["reason"],
     }
-    output_path = os.path.join(
-        os.path.dirname(__file__), "test_data", "agent_eval_results.json"
-    )
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(all_results, f, ensure_ascii=False, indent=2)
 
-    print(f"\n评测结果已保存到: {output_path}")
+    all_results = {
+        "schema_version": "1.0",
+        "eval": "agent_eval",
+        "source_files": [
+            "evaluation/agent_eval.py::load_risk_cases",
+            "evaluation/agent_eval.py::load_hallucination_cases",
+        ],
+        "method": (
+            "固定样本概况为确定性统计；反思与幻觉的对照实验类结论无原始实验日志支撑，"
+            "指标记为 null 并标注数据不足"
+        ),
+        "metrics": {
+            "no_reflection_accuracy": None,
+            "with_reflection_accuracy": None,
+            "misjudge_reduction": None,
+            "corrected_count": None,
+            "new_errors_count": None,
+            "no_rag_hallucination_rate": None,
+            "with_rag_hallucination_rate": None,
+            "hallucination_reduction": None,
+        },
+        "details": {
+            "reflection": reflection_results,
+            "hallucination": hallucination_results,
+        },
+        "insufficient": insufficient,
+    }
+    _write_results(all_results)
 
 
 if __name__ == "__main__":
