@@ -203,12 +203,13 @@ Anti-FraudAgent/
 │   │   │   ├── tool_fault/           # 工具参数校验、容错与调用追踪
 │   │   │   ├── memory/               # 长期记忆与用户画像
 │   │   │   ├── chat_agent.py         # 对话主链路（含带反思入口）
+│   │   │   ├── signal_detection.py   # 视觉伪影与音频频谱信号检测
 │   │   │   ├── tools.py              # 工具定义与执行
 │   │   │   └── rag_agent.py          # RAG 知识库问答
 │   │   ├── risk_engine/              # 风险评分引擎（rules/ 分人群规则、age_adaptive.py）
 │   │   ├── report/                   # 风险报告生成
 │   │   ├── nlp/                      # 诈骗分类、劝导话术
-│   │   ├── vector_store/             # Qdrant 向量化与检索
+│   │   ├── vector_store/             # Qdrant 向量化与混合检索（hybrid.py）
 │   │   ├── crawler/                  # 案例爬虫（关键词过滤、站点解析器、调度器）
 │   │   ├── notification/             # 监护人预警与通知推送
 │   │   └── metrics/                  # 指标统计
