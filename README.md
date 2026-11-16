@@ -347,6 +347,25 @@ POST /ai/rag/chat               # RAG 知识库问答
 GET  /ai/stats                  # 统计信息
 ```
 
+### Python AI 微服务（基础路径 `http://localhost:8501/api/v1`）
+
+```
+POST /ai/chat                      # 对话
+POST /ai/chat/stream               # SSE 流式输出
+POST /ai/chat/reflect              # 带知识库交叉验证的反思对话
+POST /ai/chat/tools                # 多轮工具调用对话
+GET  /ai/chat/guardian/alerts      # 监护人预警记录
+POST /ai/rag/search                # 混合检索（BM25 + 向量 + RRF 精排）
+POST /ai/risk/score                # 风险评分（支持案件类型动态加权）
+POST /ai/nlp/persuade              # 劝阻话术生成
+POST /ai/multimodal/cross-image    # 跨图关联分析
+POST /ai/multimodal/audio/spectrum # 音频频谱特征分析
+POST /ai/multimodal/video/frames   # 视频逐帧分析
+POST /ai/multimodal/ai-synthesis-detect # AI 合成内容检测
+POST /ai/multimodal/intent-classify     # 三模式意图识别
+POST /ai/multimodal/signal/image        # 图像伪影信号检测
+```
+
 ### 业务功能
 
 ```
