@@ -93,13 +93,16 @@ AI 合成内容检测融合**视觉伪影**（清晰度 / 频域高频 / JPEG �
 
 | 能力 | 代码位置 | 说明 |
 |---|---|---|
-| 反思机制 | `app/llm/reflection/engine.py`、`app/llm/chat_agent.py` | 对 Agent 输出做事实、意图、风险、合规、格式五项复查，与知识库上下文交叉验证；发现矛盾后给出修正建议并重写输出（`reflect_and_correct` 支持多轮修正），`chat_with_reflection` 为带反思的对话入口 |
-| 工具调用与容错 | `app/llm/tools.py`、`app/llm/tool_fault/` | 工具在服务端本地执行；`tool_fault/` 提供参数校验、失败容错与调用追踪 |
-| 长期记忆与用户画像 | `app/llm/memory/`、`app/llm/chat_memory.py` | 会话记忆与用户画像的读写 |
-| 监护人通知链路 | `app/notification/` | 儿童 / 老年等高风险场景自动触发监护人预警，写入站内系统消息 |
+| 混合检索 RAG | `app/vector_store/hybrid.py` | BM25 关键词路与 Qdrant 向量路双路召回，RRF(k=60) 融合后经 `bge-reranker-base` 精排；支持查询改写、历史感知检索，结果标注召回路径 |
+| 视觉伪影与音频频谱检测 | `app/llm/signal_detection.py` | 图像清晰度 / 频域高频 / 块效应与音频频谱平坦度 / 高频滚降 / 过零率等真实信号特征，与语义判定融合输出合成内容分数 |
+| 反思机制 | `app/llm/reflection/engine.py`、`app/llm/chat_agent.py` | 对 Agent 输出做事实、意图、风险、合规、格式五项复查，检索知识库上下文做交叉验证；发现矛盾后给出修正建议并重写输出（`reflect_and_correct` 支持多轮修正），`/ai/chat/reflect` 为带反思对话入口 |
+| 工具调用与容错 | `app/llm/tools.py`、`app/llm/tool_fault/` | 6 类工具在服务端本地执行；function calling 支持最多 5 轮工具结果回灌、由模型决定是否继续调用；`tool_fault/` 提供参数校验、失败容错与调用追踪 |
+| 长期记忆与用户画像 | `app/llm/memory/`、`app/llm/chat_memory.py` | 会话记忆与用户画像的持久化读写，画像贯穿主对话链路 |
+| 监护人通知链路 | `app/notification/` | 儿童 / 老年等高风险场景自动触发监护人预警并落盘，可查询预警记录 |
 | 知识采集与版本管理 | `app/crawler/`、`evaluation/kb_version_manager.py` | 关键词过滤、站点解析器（含公安部站点 `parsers/mps_gov.py`）、调度器、进度管理与知识库版本管理 |
-| 风险规则与年龄自适应 | `app/risk_engine/` | `scorer.py` 加权评分、`rules/` 分人群规则、`age_adaptive.py` 年龄调权 |
+| 风险规则与年龄自适应 | `app/risk_engine/` | `scorer.py` 加权评分、`rules/` 分人群规则、`age_adaptive.py` 年龄调权，并支持按诈骗案件类型动态加权 |
 | 意图识别与多模态 | `app/llm/` | `intent_classifier.py` 三模式意图识别、`multimodal_engine.py`、`ai_synthesis_detector.py`、`vision.py` |
+| SSE 流式问答 | `app/api/router.py`、Java `AiController` | Python 侧 `text/event-stream` 流式输出，Java 层提供 SSE 代理转发，前端实时渲染 |
 | 评测脚本 | `evaluation/` | RAG / 多模态 / 风险引擎 / 爬虫 / Agent / 记忆通知 / 指标报告 / 压力测试等脚本，`run_all.py` 为统一入口 |
 
 ---
