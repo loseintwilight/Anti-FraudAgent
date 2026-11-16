@@ -182,6 +182,7 @@ graph TB
 | `qwen-plus` | 对话生成与推理 |
 | `qwen-vl-max` | 图片 / 视频理解与 OCR |
 | `text-embedding-v2` | 文本向量化 |
+| `bge-reranker-base` | 混合检索结果的 CrossEncoder 精排（可选） |
 
 > 另有本地 `sentence-transformers` 嵌入实现（`python_services/app/vector_store/embedder.py`），用于离线检索场景。
 
